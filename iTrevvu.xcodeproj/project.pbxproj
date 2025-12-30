@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5378CF302F03D13C00D369F4 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF2F2F03D13C00D369F4 /* Auth */; };
+		5378CF322F03D13C00D369F4 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF312F03D13C00D369F4 /* Functions */; };
+		5378CF342F03D13C00D369F4 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF332F03D13C00D369F4 /* PostgREST */; };
+		5378CF362F03D13C00D369F4 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF352F03D13C00D369F4 /* Realtime */; };
+		5378CF382F03D13C00D369F4 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF372F03D13C00D369F4 /* Storage */; };
+		5378CF3A2F03D13C00D369F4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 5378CF392F03D13C00D369F4 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		5378CF092F03C1DE00D369F4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +38,22 @@
 		5378CF122F03C1DE00D369F4 /* iTrevvuUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iTrevvuUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5378CF4B2F03D8E900D369F4 /* Exceptions for "iTrevvu" folder in "iTrevvu" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5378CEF82F03C1DE00D369F4 /* iTrevvu */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5378CEFB2F03C1DE00D369F4 /* iTrevvu */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5378CF4B2F03D8E900D369F4 /* Exceptions for "iTrevvu" folder in "iTrevvu" target */,
+			);
 			path = iTrevvu;
 			sourceTree = "<group>";
 		};
@@ -52,6 +74,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5378CF342F03D13C00D369F4 /* PostgREST in Frameworks */,
+				5378CF322F03D13C00D369F4 /* Functions in Frameworks */,
+				5378CF3A2F03D13C00D369F4 /* Supabase in Frameworks */,
+				5378CF302F03D13C00D369F4 /* Auth in Frameworks */,
+				5378CF382F03D13C00D369F4 /* Storage in Frameworks */,
+				5378CF362F03D13C00D369F4 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +140,12 @@
 			);
 			name = iTrevvu;
 			packageProductDependencies = (
+				5378CF2F2F03D13C00D369F4 /* Auth */,
+				5378CF312F03D13C00D369F4 /* Functions */,
+				5378CF332F03D13C00D369F4 /* PostgREST */,
+				5378CF352F03D13C00D369F4 /* Realtime */,
+				5378CF372F03D13C00D369F4 /* Storage */,
+				5378CF392F03D13C00D369F4 /* Supabase */,
 			);
 			productName = iTrevvu;
 			productReference = 5378CEF92F03C1DE00D369F4 /* iTrevvu.app */;
@@ -195,6 +229,9 @@
 			);
 			mainGroup = 5378CEF02F03C1DE00D369F4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5378CEFA2F03C1DE00D369F4 /* Products */;
 			projectDirPath = "";
@@ -400,11 +437,15 @@
 				DEVELOPMENT_TEAM = GZD32A757Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iTrevvu/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iTrevvu;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -432,11 +473,15 @@
 				DEVELOPMENT_TEAM = GZD32A757Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iTrevvu/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iTrevvu;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -578,6 +623,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5378CF2F2F03D13C00D369F4 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		5378CF312F03D13C00D369F4 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		5378CF332F03D13C00D369F4 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		5378CF352F03D13C00D369F4 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		5378CF372F03D13C00D369F4 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		5378CF392F03D13C00D369F4 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5378CF2E2F03D13C00D369F4 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5378CEF12F03C1DE00D369F4 /* Project object */;
 }
