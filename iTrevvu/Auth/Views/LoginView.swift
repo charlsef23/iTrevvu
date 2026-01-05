@@ -2,10 +2,10 @@ import SwiftUI
 
 private enum Brand {
     static let red = Color.red
-    static let bg = Color.white
-    static let fieldBG = Color(.systemGray6)
-    static let corner: CGFloat = 16
-    static let shadow = Color.red.opacity(0.10)
+    static let bg = Color(.systemBackground)
+    static let fieldBG = Color(.secondarySystemBackground)
+    static let corner: CGFloat = 28 // pill para consistencia con WelcomeView
+    static let shadow = Color.red.opacity(0.12)
 }
 
 struct LoginView: View {
@@ -21,66 +21,73 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            Brand.bg.ignoresSafeArea()
+            // Fondo con gradiente suave como en WelcomeView
+            LinearGradient(
+                colors: [
+                    Color(.systemBackground),
+                    Color(.secondarySystemBackground)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 22) {
-                    // Hero
-                    AuthHero(title: "Iniciar sesión", subtitle: "Accede a tu cuenta para seguir entrenando.")
+                VStack(spacing: 28) {
+                    // Hero: imagen sin contenedor ni subtítulo
+                    Image("IconoSinFondo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 300)
+                        .padding(.top, 12)
+                        .accessibilityHidden(true)
                     
-                    // Card
-                    VStack(spacing: 16) {
-                        VStack(spacing: 12) {
-                            AuthTextField(
-                                text: $email,
-                                placeholder: "Email",
-                                systemImage: "envelope",
-                                contentType: .emailAddress,
-                                keyboard: .emailAddress
-                            )
-                            .focused($focusedField, equals: .email)
-                            .submitLabel(.next)
-                            .onSubmit { focusedField = .password }
-                            
-                            AuthSecureField(
-                                text: $password,
-                                placeholder: "Contraseña",
-                                systemImage: "lock"
-                            )
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit { Task { await login() } }
-                        }
-                        .shadow(color: Brand.shadow, radius: 6, y: 3)
+                    // Campos (sin tarjeta blanca)
+                    VStack(spacing: 12) {
+                        AuthTextField(
+                            text: $email,
+                            placeholder: "Email",
+                            systemImage: "envelope",
+                            contentType: .emailAddress,
+                            keyboard: .emailAddress
+                        )
+                        .focused($focusedField, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .password }
                         
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundColor(Brand.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .transition(.opacity)
-                        }
-                        
-                        Button {
-                            Task { await login() }
-                        } label: {
-                            if isLoading {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, minHeight: 54)
-                            } else {
-                                AuthPrimaryButtonLabel(title: "Entrar")
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .disabled(isLoading || !isValid)
-                        .shadow(color: Brand.shadow, radius: 10, y: 4)
+                        AuthSecureField(
+                            text: $password,
+                            placeholder: "Contraseña",
+                            systemImage: "lock"
+                        )
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.go)
+                        .onSubmit { Task { await login() } }
                     }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Brand.bg)
-                            .shadow(color: Brand.shadow, radius: 14, y: 6)
-                    )
+                    .shadow(color: Brand.shadow.opacity(0.6), radius: 6, y: 3)
+                    
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(Brand.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .transition(.opacity)
+                    }
+                    
+                    // Botón primario con el mismo estilo que WelcomeView (sin iconos ni animaciones)
+                    Button {
+                        Task { await login() }
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, minHeight: 56)
+                        } else {
+                            AuthPrimaryButtonLabel(title: "Entrar")
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isLoading || !isValid)
+                    .shadow(color: Brand.shadow, radius: 12, y: 6)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 18)
@@ -127,39 +134,7 @@ struct LoginView: View {
     }
 }
 
-private struct AuthHero: View {
-    let title: String
-    let subtitle: String
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Brand.fieldBG)
-                    .frame(width: 94, height: 94)
-                    .shadow(color: Brand.shadow, radius: 16, y: 7)
-                
-                Image("LogoApp")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 72, height: 72)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            }
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.title.bold())
-                    .foregroundColor(Brand.red)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.top, 8)
-        .padding(.bottom, 6)
-    }
-}
+// MARK: - Componentes de campos con estilo actualizado
 
 private struct AuthTextField: View {
     @Binding var text: String
@@ -181,7 +156,7 @@ private struct AuthTextField: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: Brand.corner)
-                .stroke(Brand.red.opacity(0.6), lineWidth: 1.2)
+                .stroke(Brand.red.opacity(0.55), lineWidth: 1.2)
                 .background(
                     RoundedRectangle(cornerRadius: Brand.corner).fill(Brand.fieldBG)
                 )
@@ -204,7 +179,7 @@ private struct AuthSecureField: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: Brand.corner)
-                .stroke(Brand.red.opacity(0.6), lineWidth: 1.2)
+                .stroke(Brand.red.opacity(0.55), lineWidth: 1.2)
                 .background(
                     RoundedRectangle(cornerRadius: Brand.corner).fill(Brand.fieldBG)
                 )
@@ -212,17 +187,27 @@ private struct AuthSecureField: View {
     }
 }
 
+// MARK: - Botón primario consistente con WelcomeView (sin iconos ni animaciones)
+
 private struct AuthPrimaryButtonLabel: View {
     let title: String
+    
     var body: some View {
         Text(title)
             .font(.headline.weight(.bold))
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
             .foregroundColor(.white)
+            .frame(maxWidth: .infinity, minHeight: 56)
             .background(
                 RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
                     .fill(Brand.red)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
+                    .stroke(.white.opacity(0.10), lineWidth: 1)
+            )
             .contentShape(RoundedRectangle(cornerRadius: Brand.corner, style: .continuous))
+            .accessibilityAddTraits(.isButton)
     }
 }

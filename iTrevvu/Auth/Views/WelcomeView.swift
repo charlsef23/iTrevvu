@@ -2,77 +2,64 @@ import SwiftUI
 
 private enum Brand {
     static let red = Color.red
-    static let bg = Color.white
-    static let fieldBG = Color(.systemGray6)
-    static let corner: CGFloat = 16
-    static let shadow = Color.red.opacity(0.10)
+    static let bg = Color(.systemBackground)
+    static let fieldBG = Color(.secondarySystemBackground)
+    static let corner: CGFloat = 28 // pill
+    static let shadow = Color.red.opacity(0.12)
 }
 
 struct WelcomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Brand.bg.ignoresSafeArea()
+                // Fondo con gradiente suave que respeta modo oscuro
+                LinearGradient(
+                    colors: [
+                        Color(.systemBackground),
+                        Color(.secondarySystemBackground)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
-                VStack(spacing: 24) {
+                VStack(spacing: 28) {
                     Spacer(minLength: 12)
                     
-                    // Hero
-                    VStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(Brand.fieldBG)
-                                .frame(width: 110, height: 110)
-                                .shadow(color: Brand.shadow, radius: 18, y: 8)
-                            
-                            Image("LogoApp")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 84, height: 84)
-                                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        }
-                        
-                        Text("iTrevvu")
-                            .font(.system(size: 40, weight: .heavy, design: .rounded))
-                            .foregroundColor(Brand.red)
-                        
-                        Text("Entrena. Comparte. Mejora.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 12)
+                    // Hero: solo imagen sin contenedor ni fondo
+                    Image("IconoSinFondo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 340)
+                        .padding(.top, 6)
+                        .accessibilityHidden(true)
                     
                     Spacer()
                     
-                    // Card de acciones
+                    // Acciones (sin tarjeta blanca de fondo)
                     VStack(spacing: 14) {
                         NavigationLink {
                             RegisterView()
                         } label: {
                             AuthPrimaryButtonLabel(title: "Crear cuenta")
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .shadow(color: Brand.shadow, radius: 10, y: 4)
+                        .buttonStyle(.plain)
+                        .shadow(color: Brand.shadow, radius: 12, y: 6)
                         
                         NavigationLink {
                             LoginView()
                         } label: {
                             AuthSecondaryButtonLabel(title: "Iniciar sesión")
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
                     }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Brand.bg)
-                            .shadow(color: Brand.shadow, radius: 14, y: 6)
-                    )
+                    .padding(.horizontal, 4)
                     
                     Text("Al continuar, aceptas nuestros Términos y Política de privacidad.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 4)
+                        .padding(.horizontal, 8)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 22)
@@ -83,33 +70,48 @@ struct WelcomeView: View {
 
 private struct AuthPrimaryButtonLabel: View {
     let title: String
+    
     var body: some View {
         Text(title)
             .font(.headline.weight(.bold))
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
             .foregroundColor(.white)
+            .frame(maxWidth: .infinity, minHeight: 56)
             .background(
                 RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
                     .fill(Brand.red)
             )
+            .overlay(
+                // Borde/realce sutil para dar definición
+                RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
+                    .stroke(.white.opacity(0.10), lineWidth: 1)
+            )
             .contentShape(RoundedRectangle(cornerRadius: Brand.corner, style: .continuous))
+            .accessibilityAddTraits(.isButton)
     }
 }
 
 private struct AuthSecondaryButtonLabel: View {
     let title: String
+    
     var body: some View {
         Text(title)
             .font(.headline.weight(.semibold))
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
             .foregroundColor(Brand.red)
+            .frame(maxWidth: .infinity, minHeight: 56)
             .background(
+                // Fondo muy sutil para que no sea “blanco” ni un bloque
                 RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
-                    .stroke(Brand.red, lineWidth: 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: Brand.corner, style: .continuous).fill(.white)
-                    )
+                    .fill(Color.primary.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
+                    .stroke(Brand.red.opacity(0.55), lineWidth: 1.2)
             )
             .contentShape(RoundedRectangle(cornerRadius: Brand.corner, style: .continuous))
+            .accessibilityAddTraits(.isButton)
     }
 }
