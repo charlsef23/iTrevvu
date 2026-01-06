@@ -222,13 +222,30 @@ private struct AuthSecureField: View {
     @Binding var text: String
     let placeholder: String
     let systemImage: String
+    @State private var isSecure: Bool = true
     
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
                 .foregroundColor(Brand.red)
-            SecureField(placeholder, text: $text)
-                .textContentType(.newPassword)
+            
+            Group {
+                if isSecure {
+                    SecureField(placeholder, text: $text)
+                        .textContentType(.newPassword)
+                } else {
+                    TextField(placeholder, text: $text)
+                        .textContentType(.newPassword)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            
+            Button(action: { isSecure.toggle() }) {
+                Image(systemName: isSecure ? "eye" : "eye.slash")
+                    .foregroundColor(.secondary)
+                    .accessibilityLabel(isSecure ? "Mostrar contraseña" : "Ocultar contraseña")
+            }
         }
         .padding()
         .background(
