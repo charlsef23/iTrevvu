@@ -1,6 +1,6 @@
 import Foundation
-import Combine
 import Supabase
+import Combine
 
 @MainActor
 final class AuthService: ObservableObject {
@@ -25,12 +25,19 @@ final class AuthService: ObservableObject {
     }
 
     func signIn(email: String, password: String) async throws {
-        let session = try await supabase.auth.signIn(email: email, password: password)
+        let session = try await supabase.auth.signIn(
+            email: email,
+            password: password
+        )
         sessionUserId = session.user.id
     }
 
     func signUp(email: String, password: String, username: String) async throws {
-        let session = try await supabase.auth.signUp(email: email, password: password)
+        let session = try await supabase.auth.signUp(
+            email: email,
+            password: password
+        )
+
         let uid = session.user.id
 
         struct PerfilInsert: Encodable {
@@ -42,7 +49,7 @@ final class AuthService: ObservableObject {
             let avatar_url: String?
         }
 
-        let payload = PerfilInsert(
+        let perfil = PerfilInsert(
             id: uid,
             username: username.lowercased(),
             nombre: nil,
@@ -51,12 +58,18 @@ final class AuthService: ObservableObject {
             avatar_url: nil
         )
 
-        try await supabase.from("perfil").insert(payload).execute()
+        try await supabase
+            .from("perfil")
+            .insert(perfil)
+            .execute()
+
         sessionUserId = uid
     }
 
     func signOut() async {
-        do { try await supabase.auth.signOut() } catch {}
+        do {
+            try await supabase.auth.signOut()
+        } catch {}
         sessionUserId = nil
     }
 }
