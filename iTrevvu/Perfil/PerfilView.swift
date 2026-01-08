@@ -64,44 +64,6 @@ struct PerfilView: View {
                         .init(title: "Ajustes", systemImage: "gearshape")
                     ])
 
-                    // Ajustes separado
-                    NavigationLink {
-                        AjustesView(onSignOutTapped: { showSignOutConfirm = true })
-                    } label: {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Brand.red.opacity(0.12))
-                                Image(systemName: "gearshape.fill")
-                                    .foregroundStyle(Brand.red)
-                            }
-                            .frame(width: 38, height: 38)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Ajustes")
-                                    .font(.subheadline.weight(.semibold))
-                                Text("Privacidad, notificaciones, seguridad")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(14)
-                        .background(Brand.card)
-                        .clipShape(RoundedRectangle(cornerRadius: Brand.corner, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
-                                .strokeBorder(Brand.red.opacity(0.10), lineWidth: 1)
-                        )
-                        .shadow(color: Brand.redShadow, radius: 10, y: 6)
-                    }
-                    .buttonStyle(.plain)
-
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 16)
