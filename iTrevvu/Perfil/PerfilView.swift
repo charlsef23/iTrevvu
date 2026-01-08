@@ -3,52 +3,135 @@ import SwiftUI
 struct PerfilView: View {
     @EnvironmentObject private var auth: AuthService
 
+    private enum Brand {
+        static let red = Color.red
+        static let bg = Color(.systemBackground)
+        static let card = Color(.secondarySystemBackground)
+        static let redShadow = Color.red.opacity(0.10)
+        static let corner: CGFloat = 20
+    }
+
+    // Placeholder (luego conectas a Supabase)
+    private let username = "usuario_fit"
+    private let fullName = "Carlos"
+    private let bio = "Amante del fitness y la vida sana 💪"
+    private let entrenos = "120"
+    private let seguidores = "1.2K"
+    private let siguiendo = "180"
+
+    @State private var showSignOutConfirm = false
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 14) {
 
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 100, height: 100)
+                    PerfilHeaderView(
+                        username: username,
+                        fullName: fullName,
+                        bio: bio
+                    )
 
-                Text("usuario_fit")
-                    .font(.title.bold())
+                    // Actions
+                    HStack(spacing: 12) {
+                        NavigationLink {
+                            EditarPerfilPlaceholderView()
+                        } label: {
+                            Label("Editar", systemImage: "pencil")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Brand.red)
 
-                Text("Amante del fitness y la vida sana 💪")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                        ShareLink(item: "Mira mi perfil en iTrevvu: @\(username)") {
+                            Label("Compartir", systemImage: "square.and.arrow.up")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Brand.red)
+                    }
 
-                HStack(spacing: 16) {
-                    ProfileStat(title: "Entrenos", value: "120")
-                    ProfileStat(title: "Seguidores", value: "1.2K")
-                    ProfileStat(title: "Siguiendo", value: "180")
+                    PerfilStatsView(stats: [
+                        .init(title: "Entrenos", value: entrenos, action: { }),
+                        .init(title: "Seguidores", value: seguidores, action: { }),
+                        .init(title: "Siguiendo", value: siguiendo, action: { })
+                    ])
+
+                    PerfilQuickGridView(items: [
+                        .init(title: "Mis posts", systemImage: "square.grid.2x2"),
+                        .init(title: "Logros", systemImage: "trophy"),
+                        .init(title: "Guardados", systemImage: "bookmark"),
+                        .init(title: "Ajustes", systemImage: "gearshape")
+                    ])
+
+                    // Ajustes separado
+                    NavigationLink {
+                        AjustesView(onSignOutTapped: { showSignOutConfirm = true })
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Brand.red.opacity(0.12))
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundStyle(Brand.red)
+                            }
+                            .frame(width: 38, height: 38)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Ajustes")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Privacidad, notificaciones, seguridad")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(14)
+                        .background(Brand.card)
+                        .clipShape(RoundedRectangle(cornerRadius: Brand.corner, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Brand.corner, style: .continuous)
+                                .strokeBorder(Brand.red.opacity(0.10), lineWidth: 1)
+                        )
+                        .shadow(color: Brand.redShadow, radius: 10, y: 6)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 24)
                 }
-
-                Spacer()
-
-                Button("Cerrar sesión") {
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+            }
+            .background(Brand.bg)
+            .navigationTitle("Perfil")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        AjustesView(onSignOutTapped: { showSignOutConfirm = true })
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.headline)
+                            .foregroundStyle(Brand.red)
+                    }
+                }
+            }
+            .confirmationDialog(
+                "¿Seguro que quieres cerrar sesión?",
+                isPresented: $showSignOutConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Cerrar sesión", role: .destructive) {
                     Task { await auth.signOut() }
                 }
-                .buttonStyle(.borderedProminent)
+                Button("Cancelar", role: .cancel) { }
             }
-            .padding()
-            .navigationTitle("Perfil")
+            .tint(Brand.red)
         }
-    }
-}
-
-private struct ProfileStat: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack {
-            Text(value)
-                .font(.headline.bold())
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
