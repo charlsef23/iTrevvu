@@ -8,7 +8,7 @@ struct MainTabView: View {
                     Label("Inicio", systemImage: "house.fill")
                 }
 
-            NutriciónView()
+            NutricionView()
                 .tabItem {
                     Label("Nutrición", systemImage: "leaf.fill")
                 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct NutriciónView: View {
+struct NutricionView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
