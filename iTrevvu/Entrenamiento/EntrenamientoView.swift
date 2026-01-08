@@ -1,78 +1,108 @@
 import SwiftUI
 
 struct EntrenamientoView: View {
+
+    @State private var selectedDate: Date = .now
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
 
-                    Button {
-                        // iniciar entrenamiento
+                    TrainingCalendarCard(selectedDate: $selectedDate)
+
+                    NavigationLink {
+                        IniciarEntrenamientoView()
                     } label: {
-                        Label("Iniciar entrenamiento",
-                              systemImage: "play.fill")
-                            .font(.headline.bold())
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                            .background(Color.red)
-                            .cornerRadius(18)
+                        PrimaryCTA(
+                            title: "Iniciar entrenamiento",
+                            subtitle: "Gimnasio o cardio · con temporizador y series",
+                            systemImage: "play.fill"
+                        )
                     }
+                    .buttonStyle(.plain)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Rutinas")
-                            .font(.title3.bold())
+                    SectionHeader(title: "Entrenamientos", actionTitle: "Ver todo") { }
 
-                        ForEach(0..<3) { _ in
-                            WorkoutCard()
+                    TrainingCategoryCarousel(items: [
+                        .init(
+                            title: "Gimnasio",
+                            subtitle: "Fuerza, hipertrofia, full body…",
+                            systemImage: "dumbbell.fill",
+                            tint: TrainingBrand.red,
+                            destination: AnyView(GimnasioHubView())
+                        ),
+                        .init(
+                            title: "Cardio",
+                            subtitle: "Correr, bici, HIIT, intervalos…",
+                            systemImage: "figure.run",
+                            tint: TrainingBrand.red,
+                            destination: AnyView(CardioHubView())
+                        ),
+                        .init(
+                            title: "Movilidad",
+                            subtitle: "Estiramientos y recuperación",
+                            systemImage: "figure.cooldown",
+                            tint: TrainingBrand.red,
+                            destination: AnyView(MovilidadView())
+                        )
+                    ])
+
+                    SectionHeader(title: "Rutinas", actionTitle: "Explorar") { }
+
+                    VStack(spacing: 12) {
+                        NavigationLink { RutinaDetalleView(title: "Fuerza · Parte superior") } label: {
+                            RoutineCard(title: "Fuerza · Parte superior", subtitle: "6 ejercicios · 45 min", tag: "Recomendada")
                         }
-                    }
+                        .buttonStyle(.plain)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Historial")
-                            .font(.title3.bold())
-
-                        ForEach(0..<2) { _ in
-                            WorkoutHistoryRow()
+                        NavigationLink { RutinaDetalleView(title: "Hipertrofia · Pierna") } label: {
+                            RoutineCard(title: "Hipertrofia · Pierna", subtitle: "7 ejercicios · 55 min", tag: "Popular")
                         }
+                        .buttonStyle(.plain)
+
+                        NavigationLink { RutinaDetalleView(title: "Full Body · Express") } label: {
+                            RoutineCard(title: "Full Body · Express", subtitle: "5 ejercicios · 30 min", tag: "Rápida")
+                        }
+                        .buttonStyle(.plain)
                     }
+
+                    SectionHeader(title: "Rutinas personalizadas", actionTitle: "Crear") { }
+
+                    CustomRoutinesCard()
+
+                    SectionHeader(title: "Estadísticas", actionTitle: "Ver estadísticas") { }
+
+                    NavigationLink {
+                        EjercicioEstadisticasHubView()
+                    } label: {
+                        ExerciseStatsPreviewCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    SectionHeader(title: "Historial", actionTitle: "Ver todo") { }
+
+                    VStack(spacing: 10) {
+                        NavigationLink { HistorialDetalleView(title: "Entrenamiento de fuerza") } label: {
+                            HistoryRow(title: "Entrenamiento de fuerza", subtitle: "Ayer · 42 min", icon: "dumbbell.fill")
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink { HistorialDetalleView(title: "Cardio · Carrera") } label: {
+                            HistoryRow(title: "Cardio · Carrera", subtitle: "Hace 3 días · 28 min", icon: "figure.run")
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer(minLength: 24)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
             }
+            .background(TrainingBrand.bg)
             .navigationTitle("Entrenamiento")
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(TrainingBrand.red)
         }
-    }
-}
-
-private struct WorkoutCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Fuerza - Parte superior")
-                .font(.headline)
-            Text("6 ejercicios · 45 min")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(16)
-    }
-}
-
-private struct WorkoutHistoryRow: View {
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text("Entrenamiento de fuerza")
-                Text("Ayer · 42 min")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(14)
     }
 }

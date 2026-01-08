@@ -57,12 +57,7 @@ struct PerfilView: View {
                         .init(title: "Siguiendo", value: siguiendo, action: { })
                     ])
 
-                    PerfilQuickGridView(items: [
-                        .init(title: "Mis posts", systemImage: "square.grid.2x2"),
-                        .init(title: "Logros", systemImage: "trophy"),
-                        .init(title: "Guardados", systemImage: "bookmark"),
-                        .init(title: "Ajustes", systemImage: "gearshape")
-                    ])
+                    PerfilQuickGridView()
 
                     Spacer(minLength: 24)
                 }
