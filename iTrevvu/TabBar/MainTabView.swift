@@ -7,15 +7,15 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Inicio", systemImage: "house.fill")
                 }
-
-            NutricionView()
-                .tabItem {
-                    Label("Nutrición", systemImage: "leaf.fill")
-                }
-
+            
             EntrenamientoView()
                 .tabItem {
                     Label("Fitness", systemImage: "figure.run")
+                }
+
+            NutricionView()
+                .tabItem {
+                    Label("Nutrición", systemImage: "chart.bar.doc.horizontal")
                 }
 
             PerfilView()
