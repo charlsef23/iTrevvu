@@ -15,7 +15,7 @@ struct MainTabView: View {
 
             EntrenamientoView()
                 .tabItem {
-                    Label("Entrenar", systemImage: "dumbbell.fill")
+                    Label("Fitness", systemImage: "figure.run")
                 }
 
             PerfilView()
