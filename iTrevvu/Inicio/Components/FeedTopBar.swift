@@ -5,22 +5,26 @@ struct FeedTopBar: View {
     let onNotifications: () -> Void
 
     var body: some View {
-        HStack {
-            Text("Inicio")
-                .font(.headline.bold())
+        HStack(spacing: 14) {
+            Text("iTrevvu")
+                .font(.title3.bold())
+                .foregroundStyle(.primary)
 
             Spacer()
 
             Button(action: onNotifications) {
                 Image(systemName: "heart")
                     .font(.headline)
+                    .foregroundStyle(FeedBrand.red)
             }
+            .buttonStyle(.plain)
 
             Button(action: onDM) {
                 Image(systemName: "paperplane")
                     .font(.headline)
+                    .foregroundStyle(FeedBrand.red)
             }
+            .buttonStyle(.plain)
         }
-        .foregroundStyle(FeedBrand.red)
     }
 }
