@@ -17,6 +17,11 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Nutrición", systemImage: "chart.bar.doc.horizontal")
                 }
+            
+            BuscarView()
+                .tabItem {
+                    Label("Buscar", systemImage: "magnifyingglass")
+                }
 
             PerfilView()
                 .tabItem {
