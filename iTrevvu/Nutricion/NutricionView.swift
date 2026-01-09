@@ -1,76 +1,128 @@
 import SwiftUI
 
 struct NutricionView: View {
+
+    @State private var selectedDate: Date = .now
+
+    // Estado demo (luego lo conectas a datos reales)
+    @State private var calorieGoal: Int = 2300
+    @State private var caloriesEaten: Int = 1250
+
+    @State private var proteinGoal: Int = 160
+    @State private var carbsGoal: Int = 240
+    @State private var fatGoal: Int = 70
+
+    @State private var proteinEaten: Int = 92
+    @State private var carbsEaten: Int = 130
+    @State private var fatEaten: Int = 38
+
+    @State private var waterGoalML: Int = 2500
+    @State private var waterML: Int = 1100
+
+    @State private var meals: [MealLog] = [
+        MealLog(id: UUID(), meal: .desayuno, items: []),
+        MealLog(id: UUID(), meal: .comida, items: []),
+        MealLog(id: UUID(), meal: .cena, items: []),
+        MealLog(id: UUID(), meal: .snacks, items: [])
+    ]
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
 
-                    VStack(spacing: 8) {
-                        Text("Calorías de hoy")
-                            .font(.headline)
-                        Text("1.850 / 2.300 kcal")
-                            .font(.title.bold())
-                            .foregroundColor(.green)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(20)
+                    NutritionDaySummaryCard(
+                        date: selectedDate,
+                        calorieGoal: calorieGoal,
+                        caloriesEaten: caloriesEaten
+                    )
 
+                    MacroRingRow(
+                        protein: (proteinEaten, proteinGoal),
+                        carbs: (carbsEaten, carbsGoal),
+                        fat: (fatEaten, fatGoal)
+                    )
+
+                    QuickActionsCarousel(items: [
+                        .init(title: "Buscar alimento", subtitle: "Base de datos", systemImage: "magnifyingglass") {
+                            // Navega con NavigationLink en el HUB (abajo)
+                        },
+                        .init(title: "Escanear", subtitle: "Código de barras", systemImage: "barcode.viewfinder") { },
+                        .init(title: "Recetas", subtitle: "Ideas rápidas", systemImage: "book.closed") { },
+                        .init(title: "Plan semanal", subtitle: "Objetivos", systemImage: "calendar") { }
+                    ])
+
+                    // Accesos reales (con navegación)
                     HStack(spacing: 12) {
-                        MacroCard(title: "Proteínas", value: "120g")
-                        MacroCard(title: "Carbos", value: "180g")
-                        MacroCard(title: "Grasas", value: "60g")
+                        NavigationLink { FoodSearchView() } label: {
+                            Label("Buscar", systemImage: "magnifyingglass")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(NutritionBrand.red)
+
+                        NavigationLink { NutritionPlanView() } label: {
+                            Label("Plan", systemImage: "calendar")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(NutritionBrand.red)
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Comidas")
-                            .font(.title3.bold())
+                    WaterCard(waterML: $waterML, goalML: waterGoalML)
 
-                        ForEach(["Desayuno", "Comida", "Cena"], id: \.self) { meal in
-                            MealRow(title: meal)
+                    SectionHeader(title: "Comidas", actionTitle: "Ver día") {
+                        // opcional: pantalla calendario detalle
+                    }
+
+                    VStack(spacing: 12) {
+                        ForEach(meals) { mealLog in
+                            NavigationLink {
+                                MealDetailView(meal: mealLog.meal)
+                            } label: {
+                                MealSectionCard(
+                                    meal: mealLog.meal,
+                                    calories: mealLog.totalCalories,
+                                    itemsCount: mealLog.items.count
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
+
+                    SectionHeader(title: "Estadísticas", actionTitle: "Ver estadísticas") { }
+
+                    NavigationLink { NutritionStatsView() } label: {
+                        StatsPreviewCard(
+                            title: "Cumplimiento semanal",
+                            subtitle: "Calorías y macros · últimos 7 días",
+                            metrics: [
+                                .init(title: "Días en objetivo", value: "4/7", systemImage: "checkmark.seal.fill"),
+                                .init(title: "Promedio kcal", value: "2.1K", systemImage: "flame.fill"),
+                                .init(title: "Agua", value: "1.8L", systemImage: "drop.fill")
+                            ]
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 24)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
             }
+            .background(NutritionBrand.bg)
             .navigationTitle("Nutrición")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink { FoodSearchView() } label: {
+                        Image(systemName: "plus")
+                            .font(.headline)
+                            .foregroundStyle(NutritionBrand.red)
+                    }
+                }
+            }
+            .tint(NutritionBrand.red)
         }
-    }
-}
-
-private struct MacroCard: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.headline.bold())
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-}
-
-private struct MealRow: View {
-    let title: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text("— kcal")
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(14)
     }
 }
