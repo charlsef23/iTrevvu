@@ -1,67 +1,77 @@
 import SwiftUI
 
 struct InicioView: View {
+
+    @State private var posts: [FeedPost] = FeedMockData.samplePosts()
+
+    @State private var showDM = false
+    @State private var showNotifs = false
+    @State private var showCreatePost = false
+
+    @State private var createMode: CreatePostView.Mode = .text
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 14) {
 
-                    // Resumen rápido
-                    HStack(spacing: 16) {
-                        SummaryCard(title: "Entrenos", value: "2", icon: "dumbbell.fill")
-                        SummaryCard(title: "Calorías", value: "1.850", icon: "flame.fill")
-                        SummaryCard(title: "Pasos", value: "8.432", icon: "figure.walk")
-                    }
+                    FeedTopBar(
+                        onDM: { showDM = true },
+                        onNotifications: { showNotifs = true }
+                    )
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Actividad reciente")
-                            .font(.title3.bold())
+                    CreatePostComposerCard(
+                        onTextPost: {
+                            createMode = .text
+                            showCreatePost = true
+                        },
+                        onMediaPost: {
+                            createMode = .media
+                            showCreatePost = true
+                        },
+                        onWorkoutPost: {
+                            createMode = .workout
+                            showCreatePost = true
+                        }
+                    )
 
-                        ForEach(0..<3) { _ in
-                            ActivityCard()
+                    VStack(spacing: 12) {
+                        ForEach($posts) { $post in
+                            FeedPostCard(post: $post) {
+                                // abrir detalle
+                            }
+                            .background(
+                                NavigationLink("", destination: PostDetailView(post: post))
+                                    .opacity(0)
+                            )
                         }
                     }
+
+                    Spacer(minLength: 24)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
             }
-            .navigationTitle("Inicio")
+            .background(FeedBrand.bg)
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showDM) {
+                NavigationStack { DirectMessagesView() }
+            }
+            .sheet(isPresented: $showNotifs) {
+                NavigationStack { NotificationsView() }
+            }
+            .sheet(isPresented: $showCreatePost) {
+                NavigationStack {
+                    CreatePostView(mode: createMode) { newPost in
+                        // inserta arriba del feed
+                        posts.insert(newPost, at: 0)
+                        showCreatePost = false
+                    } onCancel: {
+                        showCreatePost = false
+                    }
+                }
+            }
         }
-    }
-}
-
-private struct SummaryCard: View {
-    let title: String
-    let value: String
-    let icon: String
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .foregroundColor(.red)
-            Text(value)
-                .font(.headline.bold())
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-}
-
-private struct ActivityCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("🏋️ Entrenamiento de fuerza")
-                .font(.headline)
-            Text("45 min · Pecho & tríceps")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(16)
+        .tint(FeedBrand.red)
     }
 }

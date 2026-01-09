@@ -23,5 +23,6 @@ struct MainTabView: View {
                     Label("Perfil", systemImage: "person.fill")
                 }
         }
+        .tint(.red)
     }
 }
