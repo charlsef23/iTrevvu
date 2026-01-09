@@ -87,7 +87,7 @@ struct ChatView: View {
         guard !trimmed.isEmpty else { return }
         inputText = ""
 
-        var msg = DMMessage(
+        let msg = DMMessage(
             id: UUID(),
             chatId: chat.id,
             senderId: me.id,
@@ -97,12 +97,11 @@ struct ChatView: View {
         )
         messages.append(msg)
 
-        // Simula envío (luego: Supabase insert + realtime)
         simulateDelivery(for: msg.id)
     }
 
     private func sendAttachment(_ attachment: DMAttachment, caption: String?) {
-        var msg = DMMessage(
+        let msg = DMMessage(
             id: UUID(),
             chatId: chat.id,
             senderId: me.id,
@@ -111,6 +110,7 @@ struct ChatView: View {
             state: .sending
         )
         messages.append(msg)
+
         simulateDelivery(for: msg.id)
     }
 
