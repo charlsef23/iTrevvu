@@ -8,6 +8,11 @@ struct MainTabView: View {
                     Label("Inicio", systemImage: "house.fill")
                 }
             
+            BuscarView()
+                .tabItem {
+                    Label("Buscar", systemImage: "magnifyingglass")
+                }
+            
             EntrenamientoView()
                 .tabItem {
                     Label("Fitness", systemImage: "figure.run")
@@ -17,15 +22,10 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Nutrición", systemImage: "chart.bar.doc.horizontal")
                 }
-            
-            BuscarView()
-                .tabItem {
-                    Label("Buscar", systemImage: "magnifyingglass")
-                }
 
             DirectMessagesView()
                 .tabItem {
-                    Label("Mensajes", systemImage: "paperplane")
+                    Label("Mensajes", systemImage: "message.fill")
                 }
         }
         .tint(.red)

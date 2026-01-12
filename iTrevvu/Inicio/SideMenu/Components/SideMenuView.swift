@@ -15,7 +15,7 @@ struct SideMenuView: View {
 
             SideMenuHeader(username: "usuario_fit", displayName: "Carlos")
 
-            SideMenuRow(title: "Mensajes", systemImage: "paperplane") {
+            SideMenuRow(title: "Mensajes", systemImage: "message") {
                 onClose()
                 goToDM = true
             }
@@ -35,15 +35,11 @@ struct SideMenuView: View {
                 goToPerfil = true
             }
 
+            Spacer()
+
             SideMenuRow(title: "Ajustes", systemImage: "gearshape") {
                 onClose()
                 goToAjustes = true
-            }
-
-            Spacer()
-
-            SideMenuRow(title: "Cerrar menú", systemImage: "xmark") {
-                onClose()
             }
         }
         .padding(.horizontal, 16)
