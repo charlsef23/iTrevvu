@@ -23,9 +23,9 @@ struct MainTabView: View {
                     Label("Buscar", systemImage: "magnifyingglass")
                 }
 
-            PerfilView()
+            DirectMessagesView()
                 .tabItem {
-                    Label("Perfil", systemImage: "person.fill")
+                    Label("Mensajes", systemImage: "paperplane")
                 }
         }
         .tint(.red)
