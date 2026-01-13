@@ -22,11 +22,6 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Nutrición", systemImage: "chart.bar.doc.horizontal")
                 }
-
-            DirectMessagesView()
-                .tabItem {
-                    Label("Mensajes", systemImage: "message.fill")
-                }
         }
         .tint(.red)
     }
