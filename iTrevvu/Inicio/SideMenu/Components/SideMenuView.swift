@@ -3,7 +3,6 @@ import SwiftUI
 struct SideMenuView: View {
     let onClose: () -> Void
 
-    // Navegación “push”
     @Binding var goToDM: Bool
     @Binding var goToNotifs: Bool
     @Binding var goToBuscar: Bool

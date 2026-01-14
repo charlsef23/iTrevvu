@@ -26,4 +26,3 @@ struct MainTabView: View {
         .tint(.red)
     }
 }
-s
