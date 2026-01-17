@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PerfilView: View {
     @EnvironmentObject private var auth: AuthService
-
+    
     private enum Brand {
         static let red = Color.red
         static let bg = Color(.systemBackground)
@@ -10,7 +10,7 @@ struct PerfilView: View {
         static let redShadow = Color.red.opacity(0.10)
         static let corner: CGFloat = 20
     }
-
+    
     // Placeholder (luego conectas a Supabase)
     private let username = "usuario_fit"
     private let fullName = "Carlos"
@@ -18,20 +18,20 @@ struct PerfilView: View {
     private let entrenos = "120"
     private let seguidores = "1.2K"
     private let siguiendo = "180"
-
+    
     @State private var showSignOutConfirm = false
-
+    
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
-
+                    
                     PerfilHeaderView(
                         username: username,
                         fullName: fullName,
                         bio: bio
                     )
-
+                    
                     // Actions
                     HStack(spacing: 12) {
                         NavigationLink {
@@ -42,7 +42,7 @@ struct PerfilView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Brand.red)
-
+                        
                         ShareLink(item: "Mira mi perfil en iTrevvu: @\(username)") {
                             Label("Compartir", systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)
@@ -50,15 +50,15 @@ struct PerfilView: View {
                         .buttonStyle(.bordered)
                         .tint(Brand.red)
                     }
-
+                    
                     PerfilStatsView(stats: [
                         .init(title: "Entrenos", value: entrenos, action: { }),
                         .init(title: "Seguidores", value: seguidores, action: { }),
                         .init(title: "Siguiendo", value: siguiendo, action: { })
                     ])
-
+                    
                     PerfilQuickGridView()
-
+                    
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 16)
