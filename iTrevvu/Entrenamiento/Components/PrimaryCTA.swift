@@ -10,6 +10,7 @@ struct PrimaryCTA: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.18))
+
                 Image(systemName: systemImage)
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.white)
@@ -20,6 +21,7 @@ struct PrimaryCTA: View {
                 Text(title)
                     .font(.headline.bold())
                     .foregroundStyle(.white)
+
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.9))
@@ -34,11 +36,15 @@ struct PrimaryCTA: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [TrainingBrand.red, TrainingBrand.red.opacity(0.85)],
+                colors: [
+                    TrainingBrand.red,
+                    TrainingBrand.red.opacity(0.78)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
+        .shadow(color: TrainingBrand.red.opacity(0.20), radius: 10, y: 6)
     }
 }

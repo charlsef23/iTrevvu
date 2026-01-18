@@ -15,7 +15,7 @@ struct TrainingCategoryCarousel: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 ForEach(items) { item in
                     NavigationLink {
                         item.destination
@@ -30,12 +30,14 @@ struct TrainingCategoryCarousel: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.horizontal, 2)
+            .padding(.vertical, 4)
         }
     }
 }
 
 private struct CategoryCard: View {
+
     let title: String
     let subtitle: String
     let systemImage: String
@@ -43,9 +45,20 @@ private struct CategoryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(tint.opacity(0.12))
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                tint.opacity(0.18),
+                                tint.opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
                 Image(systemName: systemImage)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(tint)
@@ -66,7 +79,9 @@ private struct CategoryCard: View {
                 Text("Abrir")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(tint)
+
                 Spacer()
+
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -78,7 +93,8 @@ private struct CategoryCard: View {
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(tint.opacity(0.10), lineWidth: 1)
+                .strokeBorder(tint.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
     }
 }

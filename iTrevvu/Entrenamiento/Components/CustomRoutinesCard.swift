@@ -3,12 +3,14 @@ import SwiftUI
 struct CustomRoutinesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(TrainingBrand.red.opacity(0.12))
+                        .fill(TrainingBrand.custom.opacity(0.14))
+
                     Image(systemName: "wand.and.stars")
-                        .foregroundStyle(TrainingBrand.red)
+                        .foregroundStyle(TrainingBrand.custom)
                         .font(.headline.weight(.bold))
                 }
                 .frame(width: 46, height: 46)
@@ -16,6 +18,7 @@ struct CustomRoutinesCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Crea tu rutina")
                         .font(.headline.bold())
+
                     Text("Personaliza ejercicios, series, descansos y notas")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -32,7 +35,7 @@ struct CustomRoutinesCard: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(TrainingBrand.red)
+                .tint(TrainingBrand.custom)
 
                 NavigationLink {
                     MisRutinasView()
@@ -41,7 +44,7 @@ struct CustomRoutinesCard: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .tint(TrainingBrand.red)
+                .tint(TrainingBrand.custom)
             }
         }
         .padding(14)
@@ -49,7 +52,8 @@ struct CustomRoutinesCard: View {
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(TrainingBrand.red.opacity(0.10), lineWidth: 1)
+                .strokeBorder(Color.gray.opacity(0.14), lineWidth: 1)
         )
+        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
     }
 }
