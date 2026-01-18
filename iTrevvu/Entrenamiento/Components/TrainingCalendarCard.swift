@@ -4,8 +4,6 @@ struct TrainingCalendarCard: View {
 
     @Binding var selectedDate: Date
     private let calendar = Calendar.current
-
-    // Azul para calendario (sensación “sistema” + no todo rojo)
     private let accent = TrainingBrand.stats
 
     var body: some View {
@@ -14,12 +12,10 @@ struct TrainingCalendarCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Calendario")
                         .font(.headline.bold())
-
                     Text(formattedMonth(selectedDate))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-
                 Spacer()
 
                 Button("Hoy") {
@@ -52,9 +48,9 @@ struct TrainingCalendarCard: View {
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(Color.gray.opacity(0.14), lineWidth: 1)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
         )
-        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
+        .shadow(color: TrainingBrand.shadow, radius: 7, y: 4)
     }
 
     private func weekDays(for date: Date) -> [Date] {
@@ -77,7 +73,6 @@ struct TrainingCalendarCard: View {
 }
 
 private struct DayPill: View {
-
     let date: Date
     let isSelected: Bool
     let isToday: Bool
@@ -97,7 +92,7 @@ private struct DayPill: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? accent : Color.clear)
+                .fill(isSelected ? accent : .clear)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)

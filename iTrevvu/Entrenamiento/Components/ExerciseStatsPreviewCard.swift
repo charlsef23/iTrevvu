@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ExerciseStatsPreviewCard: View {
 
+    private let accent = TrainingBrand.stats
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
 
@@ -9,7 +11,6 @@ struct ExerciseStatsPreviewCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Resumen")
                         .font(.headline.bold())
-
                     Text("Últimos 30 días")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -19,28 +20,13 @@ struct ExerciseStatsPreviewCard: View {
 
                 Text("Ver más")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(TrainingBrand.stats)
+                    .foregroundStyle(accent)
             }
 
             HStack(spacing: 10) {
-                StatMini(
-                    title: "Volumen",
-                    value: "12.4K kg",
-                    icon: "scalemass.fill",
-                    tint: TrainingBrand.stats
-                )
-                StatMini(
-                    title: "Sesiones",
-                    value: "18",
-                    icon: "figure.strengthtraining.traditional",
-                    tint: TrainingBrand.stats
-                )
-                StatMini(
-                    title: "PRs",
-                    value: "3",
-                    icon: "medal.fill",
-                    tint: TrainingBrand.stats
-                )
+                StatMini(title: "Volumen", value: "12.4K kg", icon: "scalemass.fill", tint: accent)
+                StatMini(title: "Sesiones", value: "18", icon: "figure.strengthtraining.traditional", tint: accent)
+                StatMini(title: "PRs", value: "3", icon: "medal.fill", tint: accent)
             }
         }
         .padding(14)
@@ -48,14 +34,13 @@ struct ExerciseStatsPreviewCard: View {
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(TrainingBrand.stats.opacity(0.15), lineWidth: 1)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
         )
-        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
+        .shadow(color: TrainingBrand.shadow, radius: 7, y: 4)
     }
 }
 
 private struct StatMini: View {
-
     let title: String
     let value: String
     let icon: String
@@ -63,7 +48,6 @@ private struct StatMini: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-
             Image(systemName: icon)
                 .foregroundStyle(tint)
 
@@ -76,9 +60,7 @@ private struct StatMini: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(
-            tint.opacity(0.08)
-        )
+        .background(TrainingBrand.softFill(tint))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

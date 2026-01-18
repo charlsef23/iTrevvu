@@ -28,9 +28,9 @@ struct SectionHeader: View {
             if let actionTitle {
                 Button(actionTitle) { onAction?() }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(tint ?? TrainingBrand.muted)
+                    .foregroundStyle(tint ?? .secondary)
             }
         }
-        .padding(.top, 4)
+        .padding(.top, 6)
     }
 }

@@ -37,14 +37,14 @@ struct PrimaryCTA: View {
         .background(
             LinearGradient(
                 colors: [
-                    TrainingBrand.red,
-                    TrainingBrand.red.opacity(0.78)
+                    TrainingBrand.action,
+                    TrainingBrand.action.opacity(0.78)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
-        .shadow(color: TrainingBrand.red.opacity(0.20), radius: 10, y: 6)
+        .shadow(color: TrainingBrand.action.opacity(0.22), radius: 12, y: 7)
     }
 }

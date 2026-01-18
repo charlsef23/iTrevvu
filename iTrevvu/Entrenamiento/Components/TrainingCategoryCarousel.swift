@@ -17,9 +17,7 @@ struct TrainingCategoryCarousel: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
                 ForEach(items) { item in
-                    NavigationLink {
-                        item.destination
-                    } label: {
+                    NavigationLink { item.destination } label: {
                         CategoryCard(
                             title: item.title,
                             subtitle: item.subtitle,
@@ -30,14 +28,13 @@ struct TrainingCategoryCarousel: View {
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.vertical, 2)
             .padding(.horizontal, 2)
-            .padding(.vertical, 4)
         }
     }
 }
 
 private struct CategoryCard: View {
-
     let title: String
     let subtitle: String
     let systemImage: String
@@ -46,32 +43,35 @@ private struct CategoryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                tint.opacity(0.18),
-                                tint.opacity(0.08)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.20), tint.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
 
-                Image(systemName: systemImage)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(tint)
+                    Image(systemName: systemImage)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(tint)
+                }
+                .frame(width: 44, height: 44)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline.bold())
+
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
             }
-            .frame(width: 48, height: 48)
-
-            Text(title)
-                .font(.headline.bold())
-
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
 
             Spacer(minLength: 0)
 
@@ -79,22 +79,20 @@ private struct CategoryCard: View {
                 Text("Abrir")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(tint)
-
                 Spacer()
-
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
         }
         .padding(14)
-        .frame(width: 240, height: 160)
+        .frame(width: 300, height: 132)
         .background(TrainingBrand.card)
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(tint.opacity(0.12), lineWidth: 1)
+                .strokeBorder(TrainingBrand.softStroke(tint), lineWidth: 1)
         )
-        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
+        .shadow(color: TrainingBrand.shadow, radius: 7, y: 4)
     }
 }

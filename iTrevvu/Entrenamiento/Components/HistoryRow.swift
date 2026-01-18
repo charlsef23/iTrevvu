@@ -8,17 +8,17 @@ struct HistoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(TrainingBrand.red.opacity(0.10))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.gray.opacity(0.10))
                 Image(systemName: icon)
-                    .foregroundStyle(TrainingBrand.red)
+                    .foregroundStyle(.secondary)
                     .font(.headline.weight(.bold))
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -32,6 +32,11 @@ struct HistoryRow: View {
         }
         .padding(14)
         .background(TrainingBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+        )
+        .shadow(color: TrainingBrand.shadow, radius: 6, y: 4)
     }
 }
