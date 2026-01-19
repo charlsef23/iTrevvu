@@ -6,13 +6,16 @@ struct CrearRutinaView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    @StateObject private var exerciseStore = ExerciseStore(client: SupabaseManager.shared.client)
+
     @State private var name: String = ""
     @State private var note: String = ""
     @State private var daysPerWeek: Int = 3
     @State private var estimatedMinutes: Int = 45
 
-    @State private var exercises: [String] = ["Press banca", "Dominadas", "Sentadilla"]
-    @State private var newExercise: String = ""
+    @State private var selectedExercises: [Exercise] = []
+    @State private var showPicker = false
+    @State private var isSaving = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -37,57 +40,66 @@ struct CrearRutinaView: View {
                     }
                 }
 
-                FormCard(title: "Ejercicios", accent: accent) {
+                FormCard(title: "Ejercicios (por ID)", accent: accent) {
                     VStack(spacing: 10) {
-                        HStack(spacing: 10) {
-                            TextField("Añadir ejercicio…", text: $newExercise)
-                                .textInputAutocapitalization(.sentences)
-                                .autocorrectionDisabled()
-
+                        HStack {
+                            Text("Seleccionados: \(selectedExercises.count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
                             Button {
-                                let t = newExercise.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guard !t.isEmpty else { return }
-                                exercises.append(t)
-                                newExercise = ""
+                                showPicker = true
                             } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title3)
+                                Label("Añadir", systemImage: "plus.circle.fill")
+                                    .font(.subheadline.weight(.semibold))
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(accent)
                         }
 
-                        ForEach(exercises.indices, id: \.self) { i in
-                            HStack {
-                                Text(exercises[i])
-                                    .font(.subheadline.weight(.semibold))
-                                Spacer()
-                                Button {
-                                    exercises.remove(at: i)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .foregroundStyle(.secondary)
+                        if selectedExercises.isEmpty {
+                            Text("Añade ejercicios desde la biblioteca para guardarlos por ID.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                                .background(Color.gray.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        } else {
+                            ForEach(Array(selectedExercises.enumerated()), id: \.element.id) { idx, ex in
+                                HStack(spacing: 10) {
+                                    Text("\(idx + 1). \(ex.name)")
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+
+                                    Spacer()
+
+                                    Button {
+                                        selectedExercises.removeAll { $0.id == ex.id }
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                                .padding(12)
+                                .background(Color.gray.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+                                )
                             }
-                            .padding(12)
-                            .background(TrainingBrand.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .strokeBorder(TrainingBrand.separator, lineWidth: 1)
-                            )
                         }
                     }
                 }
 
                 Button {
-                    // Aquí después lo guardas en Supabase
-                    dismiss()
+                    Task { await saveRoutine() }
                 } label: {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                        Text("Guardar rutina")
+                        Text(isSaving ? "Guardando…" : "Guardar rutina")
                             .font(.headline.weight(.semibold))
                         Spacer()
                     }
@@ -97,6 +109,7 @@ struct CrearRutinaView: View {
                     .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedExercises.isEmpty)
 
                 Spacer(minLength: 24)
             }
@@ -106,8 +119,68 @@ struct CrearRutinaView: View {
         .navigationTitle("Crear rutina")
         .navigationBarTitleDisplayMode(.inline)
         .tint(.primary)
+        .sheet(isPresented: $showPicker) {
+            ExercisePickerView(mode: .pick { ex in
+                if !selectedExercises.contains(where: { $0.id == ex.id }) {
+                    selectedExercises.append(ex)
+                }
+            })
+            .environmentObject(exerciseStore)
+        }
+        .task { await exerciseStore.bootstrap() }
+    }
+
+    // MARK: - Save Supabase (rutinas + rutina_items por ID)
+
+    private func saveRoutine() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let client = SupabaseManager.shared.client
+            let service = TrainingSupabaseService(client: client)
+            let autorId = try service.currentUserId()
+
+            let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // ✅ DTO Encodable
+            let routineDTO = TrainingSupabaseService.CreateRoutineDTO(
+                autor_id: autorId.uuidString,
+                titulo: cleanName,
+                descripcion: cleanNote.isEmpty ? nil : cleanNote,
+                tags: ["\(daysPerWeek)d/sem"],
+                duracion_minutos: estimatedMinutes
+            )
+
+            let created = try await service.createRoutine(routineDTO)
+
+            // ✅ Items guardados por ID (global o custom)
+            for (idx, ex) in selectedExercises.enumerated() {
+
+                let itemDTO = TrainingSupabaseService.CreateRoutineItemDTO(
+                    rutina_id: created.id.uuidString,
+                    orden: idx,
+                    ejercicio_id: ex.isCustom ? nil : ex.id.uuidString,
+                    ejercicio_usuario_id: ex.isCustom ? ex.id.uuidString : nil,
+                    nombre_override: nil,
+                    notas: nil,
+                    sets_objetivo: 3,
+                    rep_range_objetivo: ex.defaultRepRange ?? "8–12",
+                    descanso_segundos: 90
+                )
+
+                _ = try await service.createRoutineItem(itemDTO)
+            }
+
+            dismiss()
+        } catch {
+            // print("saveRoutine error:", error)
+        }
     }
 }
+
+// MARK: - UI helpers (igual que tu diseño)
 
 private struct FormCard<Content: View>: View {
     let title: String

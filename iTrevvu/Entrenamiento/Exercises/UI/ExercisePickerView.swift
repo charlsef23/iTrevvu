@@ -36,8 +36,11 @@ struct ExercisePickerView: View {
                         }
                         .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+
                             Button {
-                                store.toggleFavorite(ex.id)
+                                Task {
+                                    await store.toggleFavorite(exerciseId: ex.id, isCustom: ex.isCustom)
+                                }
                             } label: {
                                 Label(store.isFavorite(ex.id) ? "Quitar" : "Favorito",
                                       systemImage: store.isFavorite(ex.id) ? "star.slash" : "star")
@@ -46,7 +49,7 @@ struct ExercisePickerView: View {
 
                             if ex.isCustom, case .manage = mode {
                                 Button(role: .destructive) {
-                                    store.deleteCustom(ex.id)
+                                    Task { await store.deleteCustom(ex.id) }
                                 } label: {
                                     Label("Eliminar", systemImage: "trash")
                                 }
@@ -66,6 +69,7 @@ struct ExercisePickerView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         NavigationLink {
                             CreateCustomExerciseView()
+                                .environmentObject(store)
                         } label: {
                             Image(systemName: "plus")
                         }
