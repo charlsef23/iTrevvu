@@ -15,84 +15,71 @@ struct TrainingCategoryCarousel: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 ForEach(items) { item in
-                    NavigationLink { item.destination } label: {
-                        CategoryCard(
-                            title: item.title,
-                            subtitle: item.subtitle,
-                            systemImage: item.systemImage,
-                            tint: item.tint
-                        )
+                    NavigationLink {
+                        item.destination
+                    } label: {
+                        CategoryCard(item: item)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
             .padding(.horizontal, 2)
         }
     }
 }
 
 private struct CategoryCard: View {
-    let title: String
-    let subtitle: String
-    let systemImage: String
-    let tint: Color
+
+    let item: TrainingCategoryCarousel.Item
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
 
-            HStack(spacing: 10) {
+            // Icono protagonista
+            HStack {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [tint.opacity(0.20), tint.opacity(0.08)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-
-                    Image(systemName: systemImage)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(tint)
+                    Circle()
+                        .fill(item.tint.opacity(0.12))
+                    Image(systemName: item.systemImage)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(item.tint)
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 52, height: 52)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.headline.bold())
+                Spacer()
+            }
 
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
+            // Texto
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.headline.bold())
+                    .foregroundStyle(.primary)
 
-                Spacer(minLength: 0)
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)
 
-            HStack {
-                Text("Abrir")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(tint)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            // Barra de significado
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(item.tint.opacity(0.75))
+                .frame(height: 4)
+                .padding(.top, 4)
         }
         .padding(14)
-        .frame(width: 300, height: 132)
+        .frame(width: 240, height: 150)
         .background(TrainingBrand.card)
         .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                .strokeBorder(TrainingBrand.softStroke(tint), lineWidth: 1)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
         )
-        .shadow(color: TrainingBrand.shadow, radius: 7, y: 4)
+        // Sin sombras a propósito
     }
 }
