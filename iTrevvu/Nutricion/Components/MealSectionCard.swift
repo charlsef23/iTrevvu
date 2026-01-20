@@ -1,41 +1,54 @@
 import SwiftUI
 
 struct MealSectionCard: View {
-    let meal: MealType
-    let calories: Int
-    let itemsCount: Int
+    let meal: Meal
+    let onAdd: () -> Void
+    let onOpen: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(NutritionBrand.red.opacity(0.12))
-                Image(systemName: meal.systemImage)
-                    .foregroundStyle(NutritionBrand.red)
-                    .font(.headline.weight(.bold))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(meal.type.title, systemImage: meal.type.icon)
+                    .font(.headline)
+                Spacer()
+                Text("\(Int(meal.kcal)) kcal")
+                    .font(.subheadline.bold())
+                Button(action: onAdd) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(NutritionBrand.red)
+                }
+                .buttonStyle(.plain)
             }
-            .frame(width: 42, height: 42)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(meal.rawValue)
-                    .font(.subheadline.weight(.semibold))
-                Text("\(itemsCount) alimentos · \(calories) kcal")
-                    .font(.caption)
+            if meal.items.isEmpty {
+                Text("Añade alimentos para empezar.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(meal.items.prefix(3)) { item in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.food.name)
+                                    .font(.subheadline.bold())
+                                Text("\(Int(item.grams)) g • \(Int(item.kcal)) kcal")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+
+                Button(action: onOpen) {
+                    Text("Ver todo")
+                        .font(.footnote.bold())
+                        .foregroundStyle(NutritionBrand.red)
+                }
+                .buttonStyle(.plain)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
         }
-        .padding(14)
-        .background(NutritionBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(NutritionBrand.red.opacity(0.08), lineWidth: 1)
-        )
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
     }
 }

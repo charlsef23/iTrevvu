@@ -2,16 +2,17 @@ import SwiftUI
 
 struct MealDetailView: View {
     let meal: MealType
+    let onPick: (Food) -> Void
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Aquí verás los alimentos de \(meal.rawValue).")
+            Text("Aquí verás los alimentos de \(meal.title).")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             NavigationLink {
-                AddFoodToMealView(meal: meal)
+                AddFoodToMealView(meal: meal, onPick: onPick)
             } label: {
                 Label("Añadir alimento", systemImage: "plus")
                     .frame(maxWidth: .infinity, minHeight: 54)
@@ -22,7 +23,7 @@ struct MealDetailView: View {
             Spacer()
         }
         .padding(16)
-        .navigationTitle(meal.rawValue)
+        .navigationTitle(meal.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

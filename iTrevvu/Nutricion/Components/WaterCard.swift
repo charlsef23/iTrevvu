@@ -1,63 +1,63 @@
 import SwiftUI
 
 struct WaterCard: View {
-    @Binding var waterML: Int
-    let goalML: Int
+    let water: WaterLog
+    let onAdd: (Int) -> Void
+    let onSetGoal: (Int) -> Void
 
-    private var progress: Double {
-        guard goalML > 0 else { return 0 }
-        return min(Double(waterML) / Double(goalML), 1.0)
-    }
+    @State private var showGoalSheet = false
+    @State private var goalText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(NutritionBrand.red.opacity(0.12))
-                        Image(systemName: "drop.fill")
-                            .foregroundStyle(NutritionBrand.red)
-                    }
-                    .frame(width: 38, height: 38)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Agua")
-                            .font(.headline.bold())
-                        Text("\(waterML) / \(goalML) ml")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Label("Agua", systemImage: "drop.fill")
+                    .font(.headline)
                 Spacer()
-                Button {
-                    waterML = max(0, waterML - 250)
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.subheadline.weight(.bold))
+                Button("Meta") {
+                    goalText = "\(water.goalML)"
+                    showGoalSheet = true
                 }
-                .buttonStyle(.bordered)
-                .tint(NutritionBrand.red)
-
-                Button {
-                    waterML += 250
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.subheadline.weight(.bold))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(NutritionBrand.red)
+                .font(.footnote.bold())
+                .foregroundStyle(NutritionBrand.red)
+                .buttonStyle(.plain)
             }
 
-            ProgressView(value: progress)
-                .tint(NutritionBrand.red)
+            ProgressView(value: Double(water.ml), total: Double(max(water.goalML, 1)))
+            HStack {
+                Text("\(water.ml) / \(water.goalML) ml")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("+250") { onAdd(250) }
+                    .buttonStyle(.bordered)
+                Button("+500") { onAdd(500) }
+                    .buttonStyle(.bordered)
+            }
         }
-        .padding(14)
-        .background(NutritionBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous)
-                .strokeBorder(NutritionBrand.red.opacity(0.10), lineWidth: 1)
-        )
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
+        .sheet(isPresented: $showGoalSheet) {
+            NavigationStack {
+                Form {
+                    TextField("Meta (ml)", text: $goalText)
+                        .keyboardType(.numberPad)
+                }
+                .navigationTitle("Meta de agua")
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancelar") { showGoalSheet = false }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Guardar") {
+                            let goal = Int(goalText) ?? water.goalML
+                            onSetGoal(goal)
+                            showGoalSheet = false
+                        }
+                        .foregroundStyle(NutritionBrand.red)
+                    }
+                }
+            }
+        }
     }
 }

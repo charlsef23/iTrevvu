@@ -1,55 +1,56 @@
 import SwiftUI
+import Combine
 
 struct MacroRingRow: View {
-    let protein: (current: Int, goal: Int)
-    let carbs: (current: Int, goal: Int)
-    let fat: (current: Int, goal: Int)
+    let kcal: Double, kcalTarget: Double
+    let protein: Double, proteinTarget: Double
+    let carbs: Double, carbsTarget: Double
+    let fat: Double, fatTarget: Double
 
     var body: some View {
         HStack(spacing: 10) {
-            MacroCard(title: "Proteína", value: "\(protein.current)g", goal: "\(protein.goal)g", progress: ratio(protein))
-            MacroCard(title: "Carbo", value: "\(carbs.current)g", goal: "\(carbs.goal)g", progress: ratio(carbs))
-            MacroCard(title: "Grasa", value: "\(fat.current)g", goal: "\(fat.goal)g", progress: ratio(fat))
+            MacroRing(title: "Kcal", value: kcal, target: kcalTarget, unit: "")
+            MacroRing(title: "P", value: protein, target: proteinTarget, unit: "g")
+            MacroRing(title: "C", value: carbs, target: carbsTarget, unit: "g")
+            MacroRing(title: "G", value: fat, target: fatTarget, unit: "g")
         }
-    }
-
-    private func ratio(_ tuple: (current: Int, goal: Int)) -> Double {
-        guard tuple.goal > 0 else { return 0 }
-        return min(Double(tuple.current) / Double(tuple.goal), 1.0)
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
     }
 }
 
-private struct MacroCard: View {
+private struct MacroRing: View {
     let title: String
-    let value: String
-    let goal: String
-    let progress: Double
+    let value: Double
+    let target: Double
+    let unit: String
+
+    var progress: Double { target <= 0 ? 0 : min(value / target, 1) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(goal)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .stroke(.tertiary, lineWidth: 8)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(NutritionBrand.red, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+
+                VStack(spacing: 2) {
+                    Text(title)
+                        .font(.caption2.bold())
+                        .foregroundStyle(.secondary)
+                    Text("\(Int(value))\(unit)")
+                        .font(.caption.bold())
+                }
             }
+            .frame(width: 52, height: 52)
 
-            Text(value)
-                .font(.headline.bold())
-
-            ProgressView(value: progress)
-                .tint(NutritionBrand.red)
+            Text("\(Int(target))\(unit)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(NutritionBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(NutritionBrand.red.opacity(0.08), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity)
     }
 }

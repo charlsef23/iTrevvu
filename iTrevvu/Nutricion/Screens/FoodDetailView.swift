@@ -1,88 +1,141 @@
 import SwiftUI
 
 struct FoodDetailView: View {
-    let food: FoodItem
-    @State private var grams: Int = 100
-    @State private var selectedMeal: MealType = .comida
+    let food: Food
+    let meal: MealType
+    let onAdd: (_ grams: Double) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var gramsText: String = "100"
+
+    private var grams: Double { Double(gramsText) ?? 0 }
+
+    private var kcal: Int { Int((food.kcalPer100 * grams / 100.0).rounded()) }
+    private var protein: Int { Int((food.proteinPer100 * grams / 100.0).rounded()) }
+    private var carbs: Int { Int((food.carbsPer100 * grams / 100.0).rounded()) }
+    private var fat: Int { Int((food.fatPer100 * grams / 100.0).rounded()) }
 
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(food.name)
-                    .font(.title2.bold())
-                if let brand = food.brand {
-                    Text(brand)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
 
-            VStack(spacing: 12) {
-                Stepper("Cantidad: \(grams) g", value: $grams, in: 10...1000, step: 10)
+                    headerCard
 
-                Picker("Comida", selection: $selectedMeal) {
-                    ForEach(MealType.allCases) { meal in
-                        Text(meal.rawValue).tag(meal)
+                    gramsCard
+
+                    macrosCard
+
+                    Button {
+                        let g = max(0, grams)
+                        guard g > 0 else { return }
+                        onAdd(g)
+                        dismiss()
+                    } label: {
+                        Text("Añadir a \(meal.title)")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(NutritionBrand.red, in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
+                            .foregroundStyle(.white)
                     }
+                    .padding(.top, 8)
                 }
-                .pickerStyle(.segmented)
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
             }
-            .padding(14)
-            .background(NutritionBrand.card)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Macros (aprox.)")
-                    .font(.headline.bold())
-
-                MacroLine(title: "Calorías", value: kcalFor(grams))
-                MacroLine(title: "Proteína", value: gramsFor(food.protein))
-                MacroLine(title: "Carbohidratos", value: gramsFor(food.carbs))
-                MacroLine(title: "Grasas", value: gramsFor(food.fat))
+            .navigationTitle("Alimento")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cerrar") { dismiss() }
+                }
             }
-            .padding(14)
-            .background(NutritionBrand.card)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            Button {
-                // aquí luego guardas en Supabase / estado global
-            } label: {
-                Label("Añadir a \(selectedMeal.rawValue)", systemImage: "plus")
-                    .frame(maxWidth: .infinity, minHeight: 54)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(NutritionBrand.red)
-
-            Spacer()
         }
-        .padding(16)
-        .navigationTitle("Alimento")
-        .navigationBarTitleDisplayMode(.inline)
-        .tint(NutritionBrand.red)
     }
 
-    private func kcalFor(_ grams: Int) -> String {
-        let v = food.calories * grams / 100
-        return "\(v) kcal"
+    private var headerCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(food.name)
+                .font(.title2.bold())
+
+            if let brand = food.brand, !brand.isEmpty {
+                Text(brand)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Valores por 100g")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+        }
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
     }
 
-    private func gramsFor(_ per100: Int) -> String {
-        let v = per100 * grams / 100
-        return "\(v) g"
+    private var gramsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Cantidad")
+                .font(.headline)
+
+            HStack(spacing: 10) {
+                TextField("Gramos", text: $gramsText)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.roundedBorder)
+
+                Text("g")
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button("+50") { bump(50) }
+                    .buttonStyle(.bordered)
+
+                Button("+100") { bump(100) }
+                    .buttonStyle(.bordered)
+            }
+        }
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
+    }
+
+    private var macrosCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Totales (\(Int(grams))g)")
+                .font(.headline)
+
+            HStack {
+                MacroPill(title: "Kcal", value: "\(kcal)")
+                MacroPill(title: "P", value: "\(protein)g")
+                MacroPill(title: "C", value: "\(carbs)g")
+                MacroPill(title: "G", value: "\(fat)g")
+            }
+        }
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
+    }
+
+    private func bump(_ add: Double) {
+        let current = Double(gramsText) ?? 0
+        gramsText = String(Int(current + add))
     }
 }
 
-private struct MacroLine: View {
+private struct MacroPill: View {
     let title: String
     let value: String
 
     var body: some View {
-        HStack {
-            Text(title).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).fontWeight(.semibold)
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption2.bold())
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.bold())
         }
-        .font(.subheadline)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(.tertiary, in: RoundedRectangle(cornerRadius: 14))
     }
 }

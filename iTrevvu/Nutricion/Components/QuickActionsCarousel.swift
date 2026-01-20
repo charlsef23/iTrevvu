@@ -1,30 +1,16 @@
 import SwiftUI
 
 struct QuickActionsCarousel: View {
-
-    struct Item: Identifiable {
-        let id = UUID()
-        let title: String
-        let subtitle: String
-        let systemImage: String
-        let action: () -> Void
-    }
-
-    let items: [Item]
+    let onAddFood: () -> Void
+    let onAddWater: () -> Void
+    let onOpenStats: () -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(items) { item in
-                    Button(action: item.action) {
-                        QuickActionCard(
-                            title: item.title,
-                            subtitle: item.subtitle,
-                            systemImage: item.systemImage
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
+            HStack(spacing: 10) {
+                QuickActionCard(title: "Añadir comida", icon: "plus", tint: NutritionBrand.red, action: onAddFood)
+                QuickActionCard(title: "Añadir agua", icon: "drop.fill", tint: NutritionBrand.red, action: onAddWater)
+                QuickActionCard(title: "Estadísticas", icon: "chart.line.uptrend.xyaxis", tint: NutritionBrand.red, action: onOpenStats)
             }
             .padding(.vertical, 2)
         }
@@ -33,37 +19,26 @@ struct QuickActionsCarousel: View {
 
 private struct QuickActionCard: View {
     let title: String
-    let subtitle: String
-    let systemImage: String
+    let icon: String
+    let tint: Color
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(NutritionBrand.red.opacity(0.12))
-                Image(systemName: systemImage)
-                    .foregroundStyle(NutritionBrand.red)
-                    .font(.headline.weight(.bold))
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(tint, in: RoundedRectangle(cornerRadius: 12))
+                Text(title)
+                    .font(.subheadline.bold())
+                Spacer()
             }
-            .frame(width: 46, height: 46)
-
-            Text(title)
-                .font(.subheadline.bold())
-
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-
-            Spacer(minLength: 0)
+            .padding(12)
+            .frame(width: 220)
+            .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
         }
-        .padding(14)
-        .frame(width: 210, height: 140)
-        .background(NutritionBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous)
-                .strokeBorder(NutritionBrand.red.opacity(0.10), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
 }

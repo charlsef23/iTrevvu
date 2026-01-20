@@ -1,52 +1,77 @@
 import SwiftUI
 
 struct FoodSearchView: View {
+    let meal: MealType
+    let onPick: (Food) -> Void
 
-    @State private var query: String = ""
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var results: [Food] = []
+    @State private var isLoading = false
 
-    // demo foods
-    private let foods: [FoodItem] = [
-        .init(id: UUID(), name: "Avena", brand: nil, calories: 389, protein: 17, carbs: 66, fat: 7),
-        .init(id: UUID(), name: "Pechuga de pollo", brand: nil, calories: 165, protein: 31, carbs: 0, fat: 4),
-        .init(id: UUID(), name: "Plátano", brand: nil, calories: 89, protein: 1, carbs: 23, fat: 0),
-        .init(id: UUID(), name: "Yogur griego", brand: "Natural", calories: 97, protein: 9, carbs: 4, fat: 5),
-        .init(id: UUID(), name: "Arroz cocido", brand: nil, calories: 130, protein: 2, carbs: 28, fat: 0)
-    ]
-
-    private var filtered: [FoodItem] {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return foods }
-        return foods.filter { $0.name.localizedCaseInsensitiveContains(q) || ($0.brand?.localizedCaseInsensitiveContains(q) ?? false) }
-    }
+    private let service: NutritionServiceProtocol = NutritionService()
 
     var body: some View {
-        List {
-            Section("Resultados") {
-                ForEach(filtered) { food in
-                    NavigationLink {
-                        FoodDetailView(food: food)
-                    } label: {
-                        FoodRow(food: food)
+        NavigationStack {
+            List {
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Section("Sugerencias") {
+                        Button {
+                            onPick(.mock)
+                        } label: {
+                            Label("Avena", systemImage: "sparkles")
+                        }
+                    }
+                } else {
+                    Section {
+                        if isLoading {
+                            HStack { Spacer(); ProgressView(); Spacer() }
+                        } else if results.isEmpty {
+                            Text("No hay resultados.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(results) { food in
+                                Button {
+                                    onPick(food)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(food.name).font(.headline)
+                                        Text("100g • \(Int(food.kcalPer100)) kcal")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Resultados")
                     }
                 }
             }
+            .navigationTitle("Añadir a \(meal.title)")
+            .searchable(text: $query, prompt: "Buscar alimento")
+            .onChange(of: query) { _, newValue in
+                Task { await searchDebounced(newValue) }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
         }
-        .navigationTitle("Buscar alimento")
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Buscar por nombre…")
-        .tint(NutritionBrand.red)
     }
-}
 
-private struct FoodRow: View {
-    let food: FoodItem
+    private func searchDebounced(_ text: String) async {
+        isLoading = true
+        let current = text
+        try? await Task.sleep(nanoseconds: 280_000_000) // 280ms debounce
+        guard current == query else { return }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(food.name)
-                .font(.subheadline.weight(.semibold))
-            Text("\(food.calories) kcal · P \(food.protein)g · C \(food.carbs)g · G \(food.fat)g")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        do {
+            results = try await service.searchFoods(query: current)
+        } catch {
+            results = []
         }
+        isLoading = false
     }
 }

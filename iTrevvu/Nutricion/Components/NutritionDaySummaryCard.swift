@@ -1,71 +1,38 @@
 import SwiftUI
 
 struct NutritionDaySummaryCard: View {
-    let date: Date
-    let calorieGoal: Int
-    let caloriesEaten: Int
-
-    var remaining: Int { max(calorieGoal - caloriesEaten, 0) }
-    var progress: Double {
-        guard calorieGoal > 0 else { return 0 }
-        return min(Double(caloriesEaten) / Double(calorieGoal), 1.0)
-    }
+    let day: NutritionDay
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Resumen")
-                        .font(.headline.bold())
-                    Text(formatted(date))
-                        .font(.caption)
+                    Text(formattedDate(day.date))
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text("\(remaining) kcal restantes")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(NutritionBrand.red)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(NutritionBrand.red.opacity(0.10))
-                    .clipShape(Capsule())
-            }
-
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Consumidas")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(caloriesEaten)")
-                        .font(.title2.bold())
+                    Text("Resumen del día")
+                        .font(.title3.bold())
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Objetivo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(calorieGoal)")
+                    Text("\(Int(day.totalKcal)) / \(day.targets.kcal)")
                         .font(.headline.bold())
+                    Text("kcal")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            ProgressView(value: progress)
-                .tint(NutritionBrand.red)
+            ProgressView(value: day.totalKcal, total: Double(day.targets.kcal))
         }
-        .padding(14)
-        .background(NutritionBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: NutritionBrand.corner, style: .continuous)
-                .strokeBorder(NutritionBrand.red.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: NutritionBrand.shadow, radius: 10, y: 6)
+        .padding(NutritionBrand.pad)
+        .background(NutritionBrand.cardStyle(), in: RoundedRectangle(cornerRadius: NutritionBrand.corner))
     }
 
-    private func formatted(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "es_ES")
-        fmt.dateFormat = "EEEE, d MMM"
-        return fmt.string(from: date).capitalized
+    private func formattedDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_ES")
+        f.dateStyle = .full
+        return f.string(from: date).capitalized
     }
 }
