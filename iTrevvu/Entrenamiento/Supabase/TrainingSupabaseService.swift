@@ -125,12 +125,13 @@ final class TrainingSupabaseService {
 
     struct UpsertPlanDTO: Encodable {
         let autor_id: String
-        let fecha: String              // YYYY-MM-DD
-        let tipo: String               // gimnasio/cardio/movilidad/rutina
+        let fecha: String
+        let tipo: String
         let rutina_id: String?
         let rutina_titulo: String?
         let duracion_minutos: Int?
         let nota: String?
+        let meta: PlanMeta?
     }
 
     func fetchPlans(autorId: UUID, from: Date, to: Date) async throws -> [DBPlan] {

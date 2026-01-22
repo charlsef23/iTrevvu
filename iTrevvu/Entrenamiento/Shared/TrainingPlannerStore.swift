@@ -8,24 +8,25 @@ final class TrainingPlannerStore: ObservableObject {
     @Published private(set) var plansByDayKey: [String: TrainingPlan] = [:]
     @Published private(set) var isLoading = false
 
-    private let service: TrainingPlannerSupabaseService
+    // ✅ SOLO este service (no TrainingPlannerSupabaseService)
+    private let service: TrainingSupabaseService
     private var autorId: UUID?
 
     private let cal: Calendar = {
         var c = Calendar.current
-        c.firstWeekday = 2 // lunes
+        c.firstWeekday = 2
         return c
     }()
 
     init(client: SupabaseClient) {
-        self.service = TrainingPlannerSupabaseService(client: client)
+        self.service = TrainingSupabaseService(client: client)
     }
 
     func bootstrap() async {
         do {
             autorId = try service.currentUserId()
         } catch {
-            autorId = nil
+            // print("bootstrap error:", error)
         }
     }
 
@@ -35,11 +36,9 @@ final class TrainingPlannerStore: ObservableObject {
 
     func loadRange(around date: Date) async {
         guard let autorId else { return }
-
         isLoading = true
         defer { isLoading = false }
 
-        // +-45 días para semana/mes sin recargar cada gesto
         let from = cal.date(byAdding: .day, value: -45, to: date) ?? date
         let to = cal.date(byAdding: .day, value: 45, to: date) ?? date
 
@@ -51,7 +50,7 @@ final class TrainingPlannerStore: ObservableObject {
             }
             plansByDayKey = dict
         } catch {
-            // si quieres: print("loadRange error:", error)
+            // print("loadRange error:", error)
         }
     }
 
@@ -60,21 +59,23 @@ final class TrainingPlannerStore: ObservableObject {
 
         let key = dayKey(plan.date)
 
-        let dto = TrainingPlannerSupabaseService.UpsertPlanDTO(
+        // ✅ OJO: si tu columna "fecha" es DATE, lo mejor es mandar "YYYY-MM-DD"
+        let dto = TrainingSupabaseService.UpsertPlanDTO(
             autor_id: autorId.uuidString,
             fecha: key,
             tipo: plan.kind.rawValue,
             rutina_id: nil,
-            rutina_titulo: (plan.kind == .rutina ? plan.routineTitle : nil),
+            rutina_titulo: plan.kind == .rutina ? plan.routineTitle : nil,
             duracion_minutos: plan.durationMinutes,
-            nota: plan.note
+            nota: plan.note,
+            meta: plan.meta
         )
 
         do {
             let saved = try await service.upsertPlan(dto)
             plansByDayKey[key] = saved.toPlan()
         } catch {
-            // print("upsert plan error:", error)
+            // print("upsert error:", error)
         }
     }
 
@@ -86,7 +87,7 @@ final class TrainingPlannerStore: ObservableObject {
             try await service.deletePlan(autorId: autorId, dateKey: key)
             plansByDayKey.removeValue(forKey: key)
         } catch {
-            // print("delete plan error:", error)
+            // print("remove error:", error)
         }
     }
 
@@ -101,19 +102,20 @@ final class TrainingPlannerStore: ObservableObject {
     }
 }
 
+// MARK: - DBPlan -> TrainingPlan mapping
+
 private extension DBPlan {
     func toPlan() -> TrainingPlan {
-        // DB fecha es "YYYY-MM-DD"
-        let iso = ISO8601DateFormatter()
-        let date = iso.date(from: "\(fecha)T00:00:00Z") ?? Date()
-
+        // fecha viene "YYYY-MM-DD"
+        let date = ISO8601DateFormatter().date(from: fecha + "T00:00:00Z") ?? Date()
         return TrainingPlan(
             id: id,
             date: date,
             kind: TrainingPlanKind(rawValue: tipo) ?? .gimnasio,
             routineTitle: rutina_titulo,
             durationMinutes: duracion_minutos,
-            note: nota
+            note: nota,
+            meta: meta
         )
     }
 }

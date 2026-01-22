@@ -1,7 +1,6 @@
 import Foundation
 
-// MARK: - DB rows (Supabase) — Training module
-// Mantén estos nombres EXACTOS a las columnas de tu DB (snake_case)
+// MARK: - DB rows (DTO) para Supabase
 
 struct DBExercise: Codable, Identifiable {
     let id: UUID
@@ -32,6 +31,7 @@ struct DBUserExercise: Codable, Identifiable {
     let rep_range_default: String?
     let tips: String?
     let created_at: Date?
+    let updated_at: Date?
 }
 
 struct DBFavorite: Codable, Identifiable {
@@ -41,8 +41,6 @@ struct DBFavorite: Codable, Identifiable {
     let ejercicio_usuario_id: UUID?
     let created_at: Date?
 }
-
-// MARK: - Routines
 
 struct DBRoutine: Codable, Identifiable {
     let id: UUID
@@ -69,21 +67,22 @@ struct DBRoutineItem: Codable, Identifiable {
     let created_at: Date?
 }
 
-// MARK: - Plan (calendar)
-
 struct DBPlan: Codable, Identifiable {
     let id: UUID
     let autor_id: UUID
-    let fecha: String          // PostgREST te lo puede devolver como "YYYY-MM-DD"
-    let tipo: String
+    let fecha: String                 // "YYYY-MM-DD"
+    let tipo: String                  // gimnasio/cardio/movilidad/rutina
     let rutina_id: UUID?
     let rutina_titulo: String?
     let duracion_minutos: Int?
     let nota: String?
-    let created_at: Date?
-}
 
-// MARK: - Sessions (history)
+    // ✅ viene del TrainingPlan.swift (PlanMeta)
+    let meta: PlanMeta?
+
+    let created_at: Date?
+    let updated_at: Date?
+}
 
 struct DBSession: Codable, Identifiable {
     let id: UUID
