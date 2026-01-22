@@ -1,28 +1,5 @@
 import Foundation
 
-// MARK: - PlanMeta (⚠️ SOLO AQUÍ, NO LO DECLARES EN OTRO ARCHIVO)
-
-struct PlanMeta: Codable, Equatable {
-    var goal: String?                      // ej: "Hipertrofia", "Fuerza", "Resistencia"
-    var rpe: Int?                          // 1...10
-    var scheduledTime: String?             // "HH:mm"
-    var checklist: [String: Bool]?         // ej: ["Warm-up": true, "Creatina": false]
-
-    init(
-        goal: String? = nil,
-        rpe: Int? = nil,
-        scheduledTime: String? = nil,
-        checklist: [String: Bool]? = nil
-    ) {
-        self.goal = goal
-        self.rpe = rpe
-        self.scheduledTime = scheduledTime
-        self.checklist = checklist
-    }
-}
-
-// MARK: - Training plan
-
 enum TrainingPlanKind: String, Codable, CaseIterable, Identifiable {
     case gimnasio
     case cardio
@@ -41,13 +18,51 @@ enum TrainingPlanKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum PlanGoal: String, Codable, CaseIterable, Identifiable {
+    case fuerza
+    case hipertrofia
+    case resistencia
+    case tecnica
+    case recuperacion
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .fuerza: return "Fuerza"
+        case .hipertrofia: return "Hipertrofia"
+        case .resistencia: return "Resistencia"
+        case .tecnica: return "Técnica"
+        case .recuperacion: return "Recuperación"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .fuerza: return "bolt.fill"
+        case .hipertrofia: return "flame.fill"
+        case .resistencia: return "heart.fill"
+        case .tecnica: return "target"
+        case .recuperacion: return "leaf.fill"
+        }
+    }
+}
+
+/// Meta extra para planificar mejor (opcional)
+struct PlanMeta: Codable, Equatable {
+    var goal: PlanGoal?
+    var rpeTarget: Double?     // 1...10
+}
+
 struct TrainingPlan: Codable, Identifiable, Equatable {
     let id: UUID
     var date: Date
     var kind: TrainingPlanKind
+
     var routineTitle: String?
     var durationMinutes: Int?
     var note: String?
+
     var meta: PlanMeta?
 
     init(
