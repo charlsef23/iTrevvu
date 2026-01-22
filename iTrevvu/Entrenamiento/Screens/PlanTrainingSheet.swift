@@ -24,11 +24,7 @@ struct PlanTrainingSheet: View {
 
                     VStack(spacing: 12) {
                         kindPickerCard
-
-                        if kind == .rutina {
-                            routineCard
-                        }
-
+                        if kind == .rutina { routineCard }
                         detailsCard
                         noteCard
                     }
@@ -81,9 +77,7 @@ struct PlanTrainingSheet: View {
             HStack {
                 Text(formattedDate(date))
                     .font(.title3.bold())
-
                 Spacer()
-
                 Circle()
                     .fill(accentForKind(kind).opacity(0.25))
                     .frame(width: 10, height: 10)
@@ -104,18 +98,10 @@ struct PlanTrainingSheet: View {
                 .font(.headline.bold())
 
             HStack(spacing: 10) {
-                KindChip(title: "Gimnasio", isOn: kind == .gimnasio, accent: TrainingBrand.action) {
-                    kind = .gimnasio
-                }
-                KindChip(title: "Cardio", isOn: kind == .cardio, accent: TrainingBrand.cardio) {
-                    kind = .cardio
-                }
-                KindChip(title: "Movilidad", isOn: kind == .movilidad, accent: TrainingBrand.mobility) {
-                    kind = .movilidad
-                }
-                KindChip(title: "Rutina", isOn: kind == .rutina, accent: TrainingBrand.custom) {
-                    kind = .rutina
-                }
+                KindChip(title: "Gimnasio", isOn: kind == .gimnasio, accent: TrainingBrand.action) { kind = .gimnasio }
+                KindChip(title: "Cardio", isOn: kind == .cardio, accent: TrainingBrand.cardio) { kind = .cardio }
+                KindChip(title: "Movilidad", isOn: kind == .movilidad, accent: TrainingBrand.mobility) { kind = .movilidad }
+                KindChip(title: "Rutina", isOn: kind == .rutina, accent: TrainingBrand.custom) { kind = .rutina }
             }
         }
         .padding(14)
@@ -199,8 +185,6 @@ struct PlanTrainingSheet: View {
         )
     }
 
-    // MARK: - Actions
-
     private func hydrate() {
         if let existing {
             kind = existing.kind
@@ -220,7 +204,7 @@ struct PlanTrainingSheet: View {
         defer { isSaving = false }
 
         let plan = TrainingPlan(
-            id: existing?.id ?? UUID(),
+            id: existing?.id ?? UUID(), // requerido por tu modelo
             date: date,
             kind: kind,
             routineTitle: kind == .rutina ? (routineTitle.isEmpty ? "Rutina" : routineTitle) : nil,
@@ -236,8 +220,6 @@ struct PlanTrainingSheet: View {
         await planner.remove(for: date)
         dismiss()
     }
-
-    // MARK: - Helpers
 
     private func accentForKind(_ k: TrainingPlanKind) -> Color {
         switch k {
@@ -269,9 +251,7 @@ private struct KindChip: View {
                 .foregroundStyle(isOn ? .white : .primary)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
-                .background(
-                    Capsule().fill(isOn ? accent : Color.gray.opacity(0.10))
-                )
+                .background(Capsule().fill(isOn ? accent : Color.gray.opacity(0.10)))
         }
         .buttonStyle(.plain)
     }

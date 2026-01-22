@@ -106,7 +106,6 @@ final class TrainingSupabaseService {
     }
 
     func removeFavorite(autorId: UUID, ejercicioId: UUID?, ejercicioUsuarioId: UUID?) async throws {
-        // ✅ Evitamos .is(null) para no depender de overloads/versiones
         var q = client
             .from("ejercicios_favoritos")
             .delete()
@@ -228,11 +227,11 @@ final class TrainingSupabaseService {
             .value
     }
 
-    // MARK: - Sessions (historial + sets)
+    // MARK: - Sessions
 
     struct CreateSessionDTO: Encodable {
         let autor_id: String
-        let fecha: String?            // opcional, si no se manda, default now()
+        let fecha: String?
         let tipo: String
         let plan_id: String?
         let titulo: String?

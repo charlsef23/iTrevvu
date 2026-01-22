@@ -6,23 +6,21 @@ struct EntrenamientoView: View {
     @State private var calendarMode: CalendarDisplayMode = .week
     @State private var showPlanSheet = false
 
-    // Stores Supabase
+    // ✅ SOLO planner por ahora (fase 1)
     @StateObject private var planner = TrainingPlannerStore(client: SupabaseManager.shared.client)
-    @StateObject private var exerciseStore = ExerciseStore(client: SupabaseManager.shared.client)
 
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
 
-                    // Calendario
                     TrainingCalendarCard(
                         selectedDate: $selectedDate,
                         mode: $calendarMode
                     )
                     .environmentObject(planner)
 
-                    // Plan del día seleccionado
+                    // Plan del día
                     if let plan = planner.plan(for: selectedDate) {
                         NavigationLink {
                             IniciarEntrenamientoView(plan: plan)
@@ -79,7 +77,7 @@ struct EntrenamientoView: View {
                         )
                     ])
 
-                    // Rutinas
+                    // Rutinas (mock por ahora)
                     SectionHeader(title: "Rutinas", actionTitle: "Explorar", tint: TrainingBrand.custom) { }
 
                     VStack(spacing: 12) {
@@ -99,16 +97,16 @@ struct EntrenamientoView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Rutinas personalizadas
+                    // Rutinas personalizadas (mock por ahora)
                     SectionHeader(title: "Rutinas personalizadas", actionTitle: "Crear", tint: TrainingBrand.custom) { }
                     CustomRoutinesCard()
 
-                    // Estadísticas
+                    // Estadísticas (mock por ahora)
                     SectionHeader(title: "Estadísticas", actionTitle: "Ver estadísticas", tint: TrainingBrand.stats) { }
                     NavigationLink { EjercicioEstadisticasHubView() } label: { ExerciseStatsPreviewCard() }
                         .buttonStyle(.plain)
 
-                    // Historial
+                    // Historial (mock por ahora)
                     SectionHeader(title: "Historial", actionTitle: "Ver todo", tint: .secondary) { }
 
                     VStack(spacing: 10) {
@@ -132,9 +130,7 @@ struct EntrenamientoView: View {
             .navigationBarTitleDisplayMode(.inline)
 
             // ✅ Ultra limpia (0 espacio arriba)
-            .toolbar {
-                ToolbarItem(placement: .principal) { EmptyView() }
-            }
+            .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
 
             .tint(.primary)
             .sheet(isPresented: $showPlanSheet) {
@@ -144,8 +140,6 @@ struct EntrenamientoView: View {
             .task {
                 await planner.bootstrap()
                 await planner.loadRange(around: selectedDate)
-
-                await exerciseStore.bootstrap()
             }
             .onChange(of: selectedDate) { _, newValue in
                 Task { await planner.loadRange(around: newValue) }

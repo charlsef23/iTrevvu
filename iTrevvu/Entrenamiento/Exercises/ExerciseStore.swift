@@ -7,27 +7,23 @@ final class ExerciseStore: ObservableObject {
 
     @Published private(set) var global: [Exercise] = []
     @Published private(set) var custom: [Exercise] = []
-    @Published private(set) var favorites: Set<UUID> = []          // IDs de ejercicios (global o custom)
+    @Published private(set) var favorites: Set<UUID> = []
     @Published private(set) var isLoading = false
 
-    private let service: TrainingSupabaseService
+    private let service: TrainingExercisesSupabaseService
     private var autorId: UUID?
 
     init(client: SupabaseClient) {
-        self.service = TrainingSupabaseService(client: client)
+        self.service = TrainingExercisesSupabaseService(client: client)
     }
 
     var all: [Exercise] { global + custom }
-
-    // MARK: - Public API
 
     func bootstrap() async {
         do {
             autorId = try service.currentUserId()
             try await refreshAll()
-        } catch {
-            // print("ExerciseStore bootstrap error:", error)
-        }
+        } catch { }
     }
 
     func refreshAll() async throws {
@@ -44,14 +40,10 @@ final class ExerciseStore: ObservableObject {
         global = globalRows.map { $0.toExercise(isCustom: false) }.sorted { $0.name < $1.name }
         custom = userRows.map { $0.toExercise(isCustom: true) }.sorted { $0.name < $1.name }
 
-        favorites = Set(favRows.compactMap { fav in
-            fav.ejercicio_id ?? fav.ejercicio_usuario_id
-        })
+        favorites = Set(favRows.compactMap { $0.ejercicio_id ?? $0.ejercicio_usuario_id })
     }
 
-    func isFavorite(_ id: UUID) -> Bool {
-        favorites.contains(id)
-    }
+    func isFavorite(_ id: UUID) -> Bool { favorites.contains(id) }
 
     func toggleFavorite(exerciseId: UUID, isCustom: Bool) async {
         guard let autorId else { return }
@@ -72,16 +64,13 @@ final class ExerciseStore: ObservableObject {
                 )
                 favorites.insert(exerciseId)
             }
-        } catch {
-            // print("toggleFavorite error:", error)
-        }
+        } catch { }
     }
 
     func addCustom(_ exercise: Exercise) async {
         guard let autorId else { return }
 
-        // ✅ DTO Encodable (en vez de [String: Any])
-        let dto = TrainingSupabaseService.CreateUserExerciseDTO(
+        let dto = TrainingExercisesSupabaseService.CreateUserExerciseDTO(
             autor_id: autorId.uuidString,
             nombre: exercise.name,
             categoria: exercise.category.rawValue,
@@ -100,9 +89,7 @@ final class ExerciseStore: ObservableObject {
             let ex = created.toExercise(isCustom: true)
             custom.append(ex)
             custom.sort { $0.name < $1.name }
-        } catch {
-            // print("addCustom error:", error)
-        }
+        } catch { }
     }
 
     func deleteCustom(_ id: UUID) async {
@@ -110,12 +97,8 @@ final class ExerciseStore: ObservableObject {
             try await service.deleteUserExercise(id: id)
             custom.removeAll { $0.id == id }
             favorites.remove(id)
-        } catch {
-            // print("deleteCustom error:", error)
-        }
+        } catch { }
     }
-
-    // MARK: - Search
 
     func search(
         text: String,
@@ -142,8 +125,6 @@ final class ExerciseStore: ObservableObject {
         .sorted { $0.name < $1.name }
     }
 }
-
-// MARK: - DTO -> App model mapping
 
 private extension DBExercise {
     func toExercise(isCustom: Bool) -> Exercise {

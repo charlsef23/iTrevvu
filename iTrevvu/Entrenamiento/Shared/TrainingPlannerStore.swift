@@ -8,23 +8,25 @@ final class TrainingPlannerStore: ObservableObject {
     @Published private(set) var plansByDayKey: [String: TrainingPlan] = [:]
     @Published private(set) var isLoading = false
 
-    private let service: TrainingSupabaseService
+    private let service: TrainingPlannerSupabaseService
     private var autorId: UUID?
 
     private let cal: Calendar = {
         var c = Calendar.current
-        c.firstWeekday = 2
+        c.firstWeekday = 2 // lunes
         return c
     }()
 
     init(client: SupabaseClient) {
-        self.service = TrainingSupabaseService(client: client)
+        self.service = TrainingPlannerSupabaseService(client: client)
     }
 
     func bootstrap() async {
         do {
             autorId = try service.currentUserId()
-        } catch { }
+        } catch {
+            autorId = nil
+        }
     }
 
     func plan(for date: Date) -> TrainingPlan? {
@@ -33,9 +35,11 @@ final class TrainingPlannerStore: ObservableObject {
 
     func loadRange(around date: Date) async {
         guard let autorId else { return }
+
         isLoading = true
         defer { isLoading = false }
 
+        // +-45 días para semana/mes sin recargar cada gesto
         let from = cal.date(byAdding: .day, value: -45, to: date) ?? date
         let to = cal.date(byAdding: .day, value: 45, to: date) ?? date
 
@@ -47,7 +51,7 @@ final class TrainingPlannerStore: ObservableObject {
             }
             plansByDayKey = dict
         } catch {
-            // print("loadRange error:", error)
+            // si quieres: print("loadRange error:", error)
         }
     }
 
@@ -56,13 +60,12 @@ final class TrainingPlannerStore: ObservableObject {
 
         let key = dayKey(plan.date)
 
-        // ✅ DTO Encodable (en vez de [String: Any])
-        let dto = TrainingSupabaseService.UpsertPlanDTO(
+        let dto = TrainingPlannerSupabaseService.UpsertPlanDTO(
             autor_id: autorId.uuidString,
             fecha: key,
             tipo: plan.kind.rawValue,
-            rutina_id: nil, // si luego enlazas a rutinas, aquí meterías la UUID string
-            rutina_titulo: plan.kind == .rutina ? plan.routineTitle : nil,
+            rutina_id: nil,
+            rutina_titulo: (plan.kind == .rutina ? plan.routineTitle : nil),
             duracion_minutos: plan.durationMinutes,
             nota: plan.note
         )
@@ -100,9 +103,13 @@ final class TrainingPlannerStore: ObservableObject {
 
 private extension DBPlan {
     func toPlan() -> TrainingPlan {
-        TrainingPlan(
+        // DB fecha es "YYYY-MM-DD"
+        let iso = ISO8601DateFormatter()
+        let date = iso.date(from: "\(fecha)T00:00:00Z") ?? Date()
+
+        return TrainingPlan(
             id: id,
-            date: ISO8601DateFormatter().date(from: fecha + "T00:00:00Z") ?? Date(),
+            date: date,
             kind: TrainingPlanKind(rawValue: tipo) ?? .gimnasio,
             routineTitle: rutina_titulo,
             durationMinutes: duracion_minutos,

@@ -3,8 +3,8 @@ import SwiftUI
 struct ExercisePickerView: View {
 
     enum Mode {
-        case pick(onSelect: (Exercise) -> Void)
-        case manage
+        case browse
+        case pick((Exercise) -> Void)
     }
 
     let mode: Mode
@@ -12,179 +12,164 @@ struct ExercisePickerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: ExerciseStore
 
-    @State private var query = ""
-    @State private var category: ExerciseCategory? = nil
-    @State private var muscle: MuscleGroup? = nil
-    @State private var equipment: Equipment? = nil
-    @State private var onlyFavs = false
+    @State private var searchText: String = ""
+    @State private var onlyFavorites: Bool = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
 
-                filters
+                searchBar
 
-                List {
-                    ForEach(results) { ex in
-                        Button {
-                            if case .pick(let onSelect) = mode {
-                                onSelect(ex)
-                                dismiss()
-                            }
-                        } label: {
-                            ExerciseRow(exercise: ex)
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-
-                            Button {
-                                Task {
-                                    await store.toggleFavorite(exerciseId: ex.id, isCustom: ex.isCustom)
-                                }
-                            } label: {
-                                Label(store.isFavorite(ex.id) ? "Quitar" : "Favorito",
-                                      systemImage: store.isFavorite(ex.id) ? "star.slash" : "star")
-                            }
-                            .tint(.yellow)
-
-                            if ex.isCustom, case .manage = mode {
-                                Button(role: .destructive) {
-                                    Task { await store.deleteCustom(ex.id) }
-                                } label: {
-                                    Label("Eliminar", systemImage: "trash")
-                                }
-                            }
-                        }
-                    }
+                Toggle(isOn: $onlyFavorites) {
+                    Text("Solo favoritos")
+                        .font(.subheadline.weight(.semibold))
                 }
-                .listStyle(.plain)
+                .tint(TrainingBrand.stats)
+                .padding(.horizontal, 16)
+
+                content
             }
-            .navigationTitle("Ejercicios")
+            .padding(.top, 8)
+            .background(TrainingBrand.bg)
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }
                 }
-                if case .manage = mode {
-                    ToolbarItem(placement: .confirmationAction) {
-                        NavigationLink {
-                            CreateCustomExerciseView()
-                                .environmentObject(store)
-                        } label: {
-                            Image(systemName: "plus")
-                        }
+            }
+        }
+    }
+
+    // MARK: - UI
+
+    private var title: String {
+        switch mode {
+        case .browse: return "Ejercicios"
+        case .pick: return "Seleccionar ejercicio"
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Buscar ejercicio…", text: $searchText)
+                .textInputAutocapitalization(.sentences)
+                .autocorrectionDisabled()
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(TrainingBrand.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if store.isLoading {
+            ProgressView()
+                .padding(.top, 24)
+        } else {
+            let results = store.search(
+                text: searchText,
+                onlyFavorites: onlyFavorites
+            )
+
+            if results.isEmpty {
+                Text("No hay resultados.")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 24)
+            } else {
+                List {
+                    ForEach(results) { ex in
+                        row(for: ex)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 8)
             }
         }
-        .searchable(text: $query, prompt: "Buscar ejercicio")
     }
 
-    private var results: [Exercise] {
-        store.search(
-            text: query,
-            category: category,
-            primary: muscle,
-            equipment: equipment,
-            onlyFavorites: onlyFavs
-        )
-    }
+    private func row(for ex: Exercise) -> some View {
+        Button {
+            switch mode {
+            case .browse:
+                // en browse no hacemos nada (puedes abrir detalle si quieres)
+                break
 
-    private var filters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                FilterChip(title: category?.title ?? "Categoría") {
-                    category = next(category, all: [nil, .fuerza, .cardio, .movilidad])
+            case .pick(let onPick):
+                onPick(ex)
+                dismiss()
+            }
+        } label: {
+            HStack(spacing: 12) {
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(TrainingBrand.softFill(ex.isCustom ? TrainingBrand.custom : TrainingBrand.action))
+
+                    Image(systemName: ex.isCustom ? "person.fill" : "dumbbell.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(ex.isCustom ? TrainingBrand.custom : TrainingBrand.action)
+                }
+                .frame(width: 40, height: 40)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ex.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    Text("\(ex.primary.title) · \(ex.category.rawValue.capitalized)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
-                FilterChip(title: muscle?.title ?? "Músculo") {
-                    muscle = next(muscle, all: [nil] + MuscleGroup.allCases)
+                Spacer()
+
+                Button {
+                    Task {
+                        await store.toggleFavorite(exerciseId: ex.id, isCustom: ex.isCustom)
+                    }
+                } label: {
+                    Image(systemName: store.isFavorite(ex.id) ? "heart.fill" : "heart")
+                        .foregroundStyle(store.isFavorite(ex.id) ? TrainingBrand.stats : .secondary)
                 }
+                .buttonStyle(.plain)
 
-                FilterChip(title: equipment?.title ?? "Equipo") {
-                    equipment = next(equipment, all: [nil] + Equipment.allCases)
+                if case .pick = mode {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 6)
                 }
-
-                FilterChip(title: onlyFavs ? "Favoritos ✓" : "Favoritos") {
-                    onlyFavs.toggle()
-                }
             }
-            .padding(.horizontal, 16)
-        }
-    }
-
-    private func next<T: Equatable>(_ current: T?, all: [T?]) -> T? {
-        guard let idx = all.firstIndex(where: { $0 == current }) else { return all.first ?? nil }
-        let nextIdx = all.index(after: idx)
-        if nextIdx >= all.endIndex { return all.first ?? nil }
-        return all[nextIdx] ?? nil
-    }
-}
-
-private struct ExerciseRow: View {
-    let exercise: Exercise
-    @EnvironmentObject private var store: ExerciseStore
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(accent(exercise).opacity(0.10))
-                Image(systemName: icon(exercise))
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(accent(exercise))
-            }
-            .frame(width: 42, height: 42)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.name)
-                    .font(.subheadline.weight(.semibold))
-                Text("\(exercise.category.title) · \(exercise.primary.title)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if store.isFavorite(exercise.id) {
-                Image(systemName: "star.fill")
-                    .foregroundStyle(.yellow)
-                    .font(.caption)
-            }
-        }
-        .padding(.vertical, 6)
-    }
-
-    private func accent(_ ex: Exercise) -> Color {
-        switch ex.category {
-        case .fuerza: return TrainingBrand.action
-        case .cardio: return TrainingBrand.cardio
-        case .movilidad: return TrainingBrand.mobility
-        }
-    }
-
-    private func icon(_ ex: Exercise) -> String {
-        switch ex.category {
-        case .fuerza: return "dumbbell.fill"
-        case .cardio: return "figure.run"
-        case .movilidad: return "figure.cooldown"
-        }
-    }
-}
-
-private struct FilterChip: View {
-    let title: String
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color.gray.opacity(0.10))
-                .clipShape(Capsule())
+            .padding(12)
+            .background(TrainingBrand.card)
+            .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
+                    .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
