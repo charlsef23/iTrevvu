@@ -24,9 +24,9 @@ enum PlanGoal: String, Codable, CaseIterable, Identifiable {
     case resistencia
     case tecnica
     case recuperacion
-
+    
     var id: String { rawValue }
-
+    
     var title: String {
         switch self {
         case .fuerza: return "Fuerza"
@@ -36,7 +36,7 @@ enum PlanGoal: String, Codable, CaseIterable, Identifiable {
         case .recuperacion: return "Recuperación"
         }
     }
-
+    
     var systemImage: String {
         switch self {
         case .fuerza: return "bolt.fill"
