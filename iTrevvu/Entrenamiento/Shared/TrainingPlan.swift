@@ -48,7 +48,7 @@ enum PlanGoal: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Meta extra para planificar mejor 
+/// Meta extra para planificar mejor.
 struct PlanMeta: Codable, Equatable {
     var goal: PlanGoal?
     var rpeTarget: Double?     // 1...10
