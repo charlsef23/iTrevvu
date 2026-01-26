@@ -6,7 +6,8 @@ struct CrearRutinaView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    @StateObject private var exerciseStore = ExerciseStore(client: SupabaseManager.shared.client)
+    // ✅ FIX: sin parámetros
+    @StateObject private var exerciseStore = ExerciseStore()
 
     @State private var name: String = ""
     @State private var note: String = ""
@@ -40,7 +41,7 @@ struct CrearRutinaView: View {
                     }
                 }
 
-                FormCard(title: "Ejercicios (por ID)", accent: accent) {
+                FormCard(title: "Ejercicios", accent: accent) {
                     VStack(spacing: 10) {
                         HStack {
                             Text("Seleccionados: \(selectedExercises.count)")
@@ -58,7 +59,7 @@ struct CrearRutinaView: View {
                         }
 
                         if selectedExercises.isEmpty {
-                            Text("Añade ejercicios desde la biblioteca para guardarlos por ID.")
+                            Text("Añade ejercicios desde la biblioteca para guardarlos en la rutina.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,7 +69,7 @@ struct CrearRutinaView: View {
                         } else {
                             ForEach(Array(selectedExercises.enumerated()), id: \.element.id) { idx, ex in
                                 HStack(spacing: 10) {
-                                    Text("\(idx + 1). \(ex.name)")
+                                    Text("\(idx + 1). \(ex.nombre)")
                                         .font(.subheadline.weight(.semibold))
                                         .lineLimit(1)
 
@@ -127,10 +128,13 @@ struct CrearRutinaView: View {
             })
             .environmentObject(exerciseStore)
         }
-        .task { await exerciseStore.bootstrap() }
+        .task {
+            // ✅ En vez de bootstrap(), precargamos algo si quieres
+            await exerciseStore.load(type: .fuerza)
+        }
     }
 
-    // MARK: - Save Supabase (rutinas + rutina_items por ID)
+    // MARK: - Save Supabase (rutinas + rutina_items)
 
     private func saveRoutine() async {
         isSaving = true
@@ -144,7 +148,6 @@ struct CrearRutinaView: View {
             let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
             let cleanNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // ✅ DTO Encodable
             let routineDTO = TrainingSupabaseService.CreateRoutineDTO(
                 autor_id: autorId.uuidString,
                 titulo: cleanName,
@@ -155,18 +158,18 @@ struct CrearRutinaView: View {
 
             let created = try await service.createRoutine(routineDTO)
 
-            // ✅ Items guardados por ID (global o custom)
             for (idx, ex) in selectedExercises.enumerated() {
 
+                // ✅ Como ahora todo es "ejercicios", guardamos en ejercicio_id
                 let itemDTO = TrainingSupabaseService.CreateRoutineItemDTO(
                     rutina_id: created.id.uuidString,
                     orden: idx,
-                    ejercicio_id: ex.isCustom ? nil : ex.id.uuidString,
-                    ejercicio_usuario_id: ex.isCustom ? ex.id.uuidString : nil,
+                    ejercicio_id: ex.id.uuidString,
+                    ejercicio_usuario_id: nil,
                     nombre_override: nil,
                     notas: nil,
                     sets_objetivo: 3,
-                    rep_range_objetivo: ex.defaultRepRange ?? "8–12",
+                    rep_range_objetivo: nil,
                     descanso_segundos: 90
                 )
 
@@ -175,12 +178,13 @@ struct CrearRutinaView: View {
 
             dismiss()
         } catch {
+            // si quieres, muestra error
             // print("saveRoutine error:", error)
         }
     }
 }
 
-// MARK: - UI helpers (igual que tu diseño)
+// MARK: - UI helpers
 
 private struct FormCard<Content: View>: View {
     let title: String

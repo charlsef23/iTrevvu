@@ -8,16 +8,27 @@ struct ExercisePickerView: View {
     }
 
     let mode: Mode
+    let type: ExerciseType?   // ✅ opcional: si quieres filtrar por tipo desde fuera
+
+    init(mode: Mode, type: ExerciseType? = nil) {
+        self.mode = mode
+        self.type = type
+    }
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: ExerciseStore
 
     @State private var searchText: String = ""
     @State private var onlyFavorites: Bool = false
+    @State private var selectedType: ExerciseType = .fuerza
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
+
+                if type == nil {
+                    typePicker
+                }
 
                 searchBar
 
@@ -39,6 +50,18 @@ struct ExercisePickerView: View {
                     Button("Cerrar") { dismiss() }
                 }
             }
+            .task {
+                // ✅ precarga
+                let t = type ?? selectedType
+                await store.load(type: t)
+            }
+            .onChange(of: selectedType) {
+                guard type == nil else { return }
+                Task { await store.load(type: selectedType) }
+            }
+            .onChange(of: searchText) {
+                // nada: filtramos local, no hace falta recargar
+            }
         }
     }
 
@@ -48,6 +71,33 @@ struct ExercisePickerView: View {
         switch mode {
         case .browse: return "Ejercicios"
         case .pick: return "Seleccionar ejercicio"
+        }
+    }
+
+    private var typePicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(ExerciseType.allCases) { t in
+                    Button {
+                        selectedType = t
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: t.icon)
+                                .font(.caption.weight(.bold))
+                            Text(t.title)
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(selectedType == t ? .white : .primary)
+                        .padding(.vertical, 9)
+                        .padding(.horizontal, 12)
+                        .background(
+                            Capsule().fill(selectedType == t ? TrainingBrand.action : Color.gray.opacity(0.10))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
         }
     }
 
@@ -61,9 +111,7 @@ struct ExercisePickerView: View {
                 .autocorrectionDisabled()
 
             if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
+                Button { searchText = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
                 }
@@ -86,10 +134,9 @@ struct ExercisePickerView: View {
             ProgressView()
                 .padding(.top, 24)
         } else {
-            let results = store.search(
-                text: searchText,
-                onlyFavorites: onlyFavorites
-            )
+            let t = type ?? selectedType
+            let base = store.byType[t] ?? []
+            let results = filterLocal(base)
 
             if results.isEmpty {
                 Text("No hay resultados.")
@@ -110,13 +157,33 @@ struct ExercisePickerView: View {
         }
     }
 
+    private func filterLocal(_ items: [Exercise]) -> [Exercise] {
+        var out = items
+
+        if onlyFavorites {
+            out = out.filter { store.isFavorite($0.id) }
+        }
+
+        let s = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return out }
+
+        let needle = s.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        return out.filter { ex in
+            let name = ex.nombre.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+            if name.contains(needle) { return true }
+
+            let aliases = (ex.aliases ?? []).map {
+                $0.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+            }
+            return aliases.contains(where: { $0.contains(needle) })
+        }
+    }
+
     private func row(for ex: Exercise) -> some View {
         Button {
             switch mode {
             case .browse:
-                // en browse no hacemos nada (puedes abrir detalle si quieres)
                 break
-
             case .pick(let onPick):
                 onPick(ex)
                 dismiss()
@@ -124,22 +191,25 @@ struct ExercisePickerView: View {
         } label: {
             HStack(spacing: 12) {
 
+                // ✅ icono según tipo + si es personal (autor_id != nil)
+                let isPersonal = (ex.autor_id != nil)
+
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(TrainingBrand.softFill(ex.isCustom ? TrainingBrand.custom : TrainingBrand.action))
+                        .fill(TrainingBrand.softFill(isPersonal ? TrainingBrand.custom : TrainingBrand.action))
 
-                    Image(systemName: ex.isCustom ? "person.fill" : "dumbbell.fill")
+                    Image(systemName: isPersonal ? "person.fill" : "dumbbell.fill")
                         .font(.subheadline.weight(.bold))
-                        .foregroundStyle(ex.isCustom ? TrainingBrand.custom : TrainingBrand.action)
+                        .foregroundStyle(isPersonal ? TrainingBrand.custom : TrainingBrand.action)
                 }
                 .frame(width: 40, height: 40)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(ex.name)
+                    Text(ex.nombre)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
 
-                    Text("\(ex.primary.title) · \(ex.category.rawValue.capitalized)")
+                    Text(ex.tipo.title)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -147,9 +217,7 @@ struct ExercisePickerView: View {
                 Spacer()
 
                 Button {
-                    Task {
-                        await store.toggleFavorite(exerciseId: ex.id, isCustom: ex.isCustom)
-                    }
+                    Task { await store.toggleFavorite(exerciseId: ex.id) }
                 } label: {
                     Image(systemName: store.isFavorite(ex.id) ? "heart.fill" : "heart")
                         .foregroundStyle(store.isFavorite(ex.id) ? TrainingBrand.stats : .secondary)

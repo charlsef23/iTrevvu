@@ -1,153 +1,72 @@
 import Foundation
 
-enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
-    case pecho, espalda, hombro, biceps, triceps, core, gluteo, cuadriceps, femoral, gemelo
-    case fullBody
-    case cardio
-    case movilidad
-
+enum ExerciseType: String, Codable, CaseIterable, Identifiable {
+    case fuerza, calistenia, cardio, hiit, core, movilidad, rehab, deporte, rutinas
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .pecho: return "Pecho"
-        case .espalda: return "Espalda"
-        case .hombro: return "Hombro"
-        case .biceps: return "Bíceps"
-        case .triceps: return "Tríceps"
-        case .core: return "Core"
-        case .gluteo: return "Glúteo"
-        case .cuadriceps: return "Cuádriceps"
-        case .femoral: return "Femoral"
-        case .gemelo: return "Gemelo"
-        case .fullBody: return "Full body"
+        case .fuerza: return "Fuerza (Gym)"
+        case .calistenia: return "Peso corporal"
         case .cardio: return "Cardio"
-        case .movilidad: return "Movilidad"
-        }
-    }
-}
-
-enum ExerciseCategory: String, Codable, CaseIterable, Identifiable {
-    case fuerza
-    case cardio
-    case movilidad
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .fuerza: return "Fuerza"
-        case .cardio: return "Cardio"
-        case .movilidad: return "Movilidad"
-        }
-    }
-}
-
-enum Equipment: String, Codable, CaseIterable, Identifiable {
-    case pesoCorporal
-    case barra
-    case mancuernas
-    case kettlebell
-    case maquina
-    case polea
-    case banda
-    case banco
-    case smith
-    case trapBar
-    case cardioMachine
-    case otros
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .pesoCorporal: return "Peso corporal"
-        case .barra: return "Barra"
-        case .mancuernas: return "Mancuernas"
-        case .kettlebell: return "Kettlebell"
-        case .maquina: return "Máquina"
-        case .polea: return "Polea"
-        case .banda: return "Banda"
-        case .banco: return "Banco"
-        case .smith: return "Smith"
-        case .trapBar: return "Trap bar"
-        case .cardioMachine: return "Máquina cardio"
-        case .otros: return "Otros"
-        }
-    }
-}
-
-enum MovementPattern: String, Codable, CaseIterable, Identifiable {
-    case empuje
-    case tiron
-    case sentadilla
-    case bisagra
-    case carry
-    case core
-    case aislamiento
-    case locomocion
-    case movilidad
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .empuje: return "Empuje"
-        case .tiron: return "Tirón"
-        case .sentadilla: return "Sentadilla"
-        case .bisagra: return "Bisagra"
-        case .carry: return "Cargas"
+        case .hiit: return "HIIT / Conditioning"
         case .core: return "Core"
-        case .aislamiento: return "Aislamiento"
-        case .locomocion: return "Locomoción"
-        case .movilidad: return "Movilidad"
+        case .movilidad: return "Movilidad / Estiramientos"
+        case .rehab: return "Rehabilitación / Prehab"
+        case .deporte: return "Deporte (Skills)"
+        case .rutinas: return "Rutinas / Plantillas"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .fuerza: return "dumbbell"
+        case .calistenia: return "figure.strengthtraining.traditional"
+        case .cardio: return "heart"
+        case .hiit: return "bolt"
+        case .core: return "circle.grid.cross"
+        case .movilidad: return "figure.cooldown"
+        case .rehab: return "cross.case"
+        case .deporte: return "figure.run"
+        case .rutinas: return "list.bullet.rectangle"
+        }
+    }
+}
+
+enum ExerciseMetricType: String, Codable {
+    case peso_reps, reps, tiempo, distancia, calorias
+
+    var title: String {
+        switch self {
+        case .peso_reps: return "Peso + Reps"
+        case .reps: return "Reps"
+        case .tiempo: return "Tiempo"
+        case .distancia: return "Distancia"
+        case .calorias: return "Calorías"
         }
     }
 }
 
 struct Exercise: Codable, Identifiable, Hashable {
     let id: UUID
-    var name: String
-    var category: ExerciseCategory
-    var primary: MuscleGroup
-    var secondary: [MuscleGroup]
-    var equipment: [Equipment]
-    var pattern: MovementPattern
+    let tipo: ExerciseType
+    let nombre: String
+    let aliases: [String]?
+    let descripcion: String?
+    let musculo_principal: String?
+    let musculos_secundarios: [String]?
+    let equipo: [String]?
+    let patron: String?
+    let tipo_medicion: ExerciseMetricType
+    let video_url: String?
+    let es_publico: Bool
+    let autor_id: UUID?
+    let created_at: Date?
+    let updated_at: Date?
+}
 
-    // Opcional (para guiar UI)
-    var isUnilateral: Bool
-    var isBodyweight: Bool
-    var defaultRepRange: String?    // "6-10", "8-12", "30-60s", etc
-    var tips: String?
-
-    // Si es creado por el usuario
-    var isCustom: Bool
-
-    init(
-        id: UUID = UUID(),
-        name: String,
-        category: ExerciseCategory,
-        primary: MuscleGroup,
-        secondary: [MuscleGroup] = [],
-        equipment: [Equipment] = [],
-        pattern: MovementPattern,
-        isUnilateral: Bool = false,
-        isBodyweight: Bool = false,
-        defaultRepRange: String? = nil,
-        tips: String? = nil,
-        isCustom: Bool = false
-    ) {
-        self.id = id
-        self.name = name
-        self.category = category
-        self.primary = primary
-        self.secondary = secondary
-        self.equipment = equipment
-        self.pattern = pattern
-        self.isUnilateral = isUnilateral
-        self.isBodyweight = isBodyweight
-        self.defaultRepRange = defaultRepRange
-        self.tips = tips
-        self.isCustom = isCustom
-    }
+struct ExerciseFavorite: Codable, Hashable {
+    let autor_id: UUID
+    let ejercicio_id: UUID
+    let created_at: Date?
 }

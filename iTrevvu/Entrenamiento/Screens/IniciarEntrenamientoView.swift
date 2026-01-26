@@ -17,8 +17,8 @@ struct IniciarEntrenamientoView: View {
 
     @State private var mode: Mode = .gimnasio
 
-    // ✅ Store correcto (tu ExerciseStore requiere client:)
-    @StateObject private var exerciseStore = ExerciseStore(client: SupabaseManager.shared.client)
+    // ✅ FIX: ya no recibe client
+    @StateObject private var exerciseStore = ExerciseStore()
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -35,13 +35,8 @@ struct IniciarEntrenamientoView: View {
                     )
                 }
 
-                // ✅ Selector de modo (simple y limpio)
                 modePicker
-
-                // ✅ Acciones rápidas (biblioteca / empezar)
                 quickActions
-
-                // ✅ Aquí engancharás tu flujo real (temporizador, sets, etc.)
                 trainingPlaceholder
 
                 Spacer(minLength: 24)
@@ -53,12 +48,11 @@ struct IniciarEntrenamientoView: View {
         .navigationBarTitleDisplayMode(.inline)
         .tint(.primary)
         .task {
-            await exerciseStore.bootstrap()
+            // ✅ opcional: precarga una categoría para que la biblioteca vaya “instant”
+            await exerciseStore.load(type: .fuerza)
         }
         .onAppear {
-            if let plan {
-                mode = map(plan.kind)
-            }
+            if let plan { mode = map(plan.kind) }
         }
     }
 
@@ -92,8 +86,10 @@ struct IniciarEntrenamientoView: View {
 
     private var quickActions: some View {
         VStack(spacing: 10) {
+
             NavigationLink {
-                ExercisePickerView(mode: .browse)
+                // ✅ Aquí puedes cambiar a ExerciseLibraryHubView si quieres el grid de 9 tipos
+                ExerciseLibraryHubView()
                     .environmentObject(exerciseStore)
             } label: {
                 ActionRow(
@@ -106,8 +102,6 @@ struct IniciarEntrenamientoView: View {
             .buttonStyle(.plain)
 
             NavigationLink {
-                // Aquí irá tu vista de sesión/entrenamiento real si la separas
-                // Por ahora reutilizamos la misma pantalla
                 Text("Comenzar sesión (pendiente)")
                     .foregroundStyle(.secondary)
                     .padding()

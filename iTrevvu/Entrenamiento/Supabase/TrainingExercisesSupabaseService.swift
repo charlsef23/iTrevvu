@@ -1,132 +1,96 @@
 import Foundation
 import Supabase
-import PostgREST
 
 final class TrainingExercisesSupabaseService {
+    static let shared = TrainingExercisesSupabaseService()
+    private init() {}
 
-    let client: SupabaseClient
+    private var client: SupabaseClient { SupabaseManager.shared.client }
 
-    init(client: SupabaseClient) {
-        self.client = client
-    }
-
-    // MARK: - Auth
-
-    func currentUserId() throws -> UUID {
-        guard let session = client.auth.currentSession else {
-            throw NSError(
-                domain: "TrainingExercisesSupabaseService",
-                code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
-            )
-        }
-        return session.user.id
-    }
-
-    // MARK: - Exercises (global)
-
-    func fetchGlobalExercises() async throws -> [DBExercise] {
-        try await client
-            .from("ejercicios")
-            .select()
-            .order("nombre", ascending: true)
-            .execute()
-            .value
-    }
-
-    // MARK: - Exercises (user/custom)
-
-    func fetchUserExercises(autorId: UUID) async throws -> [DBUserExercise] {
-        try await client
-            .from("ejercicios_usuario")
-            .select()
-            .eq("autor_id", value: autorId.uuidString)
-            .order("nombre", ascending: true)
-            .execute()
-            .value
-    }
-
-    struct CreateUserExerciseDTO: Encodable {
-        let autor_id: String
+    // MARK: - DTO para inserts (Encodable)
+    struct CreateExerciseDTO: Encodable {
+        let tipo: String
         let nombre: String
-        let categoria: String
-        let musculo_principal: String
+        let aliases: [String]
+        let descripcion: String?
+        let musculo_principal: String?
         let musculos_secundarios: [String]
         let equipo: [String]
-        let patron: String
-        let is_unilateral: Bool
-        let is_bodyweight: Bool
-        let rep_range_default: String?
-        let tips: String?
+        let patron: String?
+        let tipo_medicion: String
+        let video_url: String?
+        let es_publico: Bool
+        let autor_id: String?
     }
 
-    func createUserExercise(_ dto: CreateUserExerciseDTO) async throws -> DBUserExercise {
-        try await client
-            .from("ejercicios_usuario")
-            .insert(dto, returning: .representation)
-            .single()
+    // MARK: - Fetch exercises by type (search local)
+    func fetchExercises(type: ExerciseType, search: String? = nil) async throws -> [Exercise] {
+        let items: [Exercise] = try await client
+            .from("ejercicios")
+            .select()
+            .eq("tipo", value: type.rawValue)
+            .order("nombre", ascending: true)
             .execute()
             .value
-    }
 
-    func deleteUserExercise(id: UUID) async throws {
-        _ = try await client
-            .from("ejercicios_usuario")
-            .delete()
-            .eq("id", value: id.uuidString)
-            .execute()
+        guard let search, !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return items
+        }
+
+        let needle = search
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .lowercased()
+
+        return items.filter { ex in
+            let name = ex.nombre
+                .folding(options: .diacriticInsensitive, locale: .current)
+                .lowercased()
+
+            if name.contains(needle) { return true }
+
+            let aliases = (ex.aliases ?? []).map {
+                $0.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+            }
+            return aliases.contains(where: { $0.contains(needle) })
+        }
     }
 
     // MARK: - Favorites
+    func fetchFavorites(for autorId: UUID) async throws -> Set<UUID> {
+        let rows: [ExerciseFavorite] = try await client
+            .from("ejercicios_favoritos")
+            .select()
+            .eq("autor_id", value: autorId.uuidString)
+            .execute()
+            .value
 
-    func fetchFavorites(autorId: UUID) async throws -> [DBFavorite] {
+        return Set(rows.map { $0.ejercicio_id })
+    }
+
+    func addFavorite(autorId: UUID, ejercicioId: UUID) async throws {
         try await client
             .from("ejercicios_favoritos")
-            .select()
-            .eq("autor_id", value: autorId.uuidString)
-            .execute()
-            .value
-    }
-
-    struct FavoriteDTO: Encodable {
-        let autor_id: String
-        let ejercicio_id: String?
-        let ejercicio_usuario_id: String?
-    }
-
-    func addFavorite(autorId: UUID, ejercicioId: UUID?, ejercicioUsuarioId: UUID?) async throws {
-        let dto = FavoriteDTO(
-            autor_id: autorId.uuidString,
-            ejercicio_id: ejercicioId?.uuidString,
-            ejercicio_usuario_id: ejercicioUsuarioId?.uuidString
-        )
-
-        _ = try await client
-            .from("ejercicios_favoritos")
-            .upsert(dto, onConflict: "autor_id,ejercicio_id,ejercicio_usuario_id", returning: .minimal)
+            .insert([
+                "autor_id": autorId.uuidString,
+                "ejercicio_id": ejercicioId.uuidString
+            ])
             .execute()
     }
 
-    func removeFavorite(autorId: UUID, ejercicioId: UUID?, ejercicioUsuarioId: UUID?) async throws {
-        // Borrado robusto: encontrar favorito y borrar por id
-        let keyColumn = (ejercicioId == nil) ? "ejercicio_usuario_id" : "ejercicio_id"
-        let keyValue = (ejercicioId ?? ejercicioUsuarioId)?.uuidString ?? ""
-
-        let rows: [DBFavorite] = try await client
-            .from("ejercicios_favoritos")
-            .select()
-            .eq("autor_id", value: autorId.uuidString)
-            .eq(keyColumn, value: keyValue)
-            .limit(1)
-            .execute()
-            .value
-
-        guard let fav = rows.first else { return }
-
-        _ = try await client
+    func removeFavorite(autorId: UUID, ejercicioId: UUID) async throws {
+        try await client
             .from("ejercicios_favoritos")
             .delete()
-            .eq("id", value: fav.id.uuidString)
+            .eq("autor_id", value: autorId.uuidString)
+            .eq("ejercicio_id", value: ejercicioId.uuidString)
+            .execute()
+    }
+
+    // MARK: - Create custom exercise
+    func createCustomExercise(_ dto: CreateExerciseDTO) async throws {
+        try await client
+            .from("ejercicios")
+            .insert(dto)
             .execute()
     }
 }
