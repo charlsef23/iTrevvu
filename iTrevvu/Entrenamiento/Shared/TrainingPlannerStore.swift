@@ -5,10 +5,10 @@ import Supabase
 @MainActor
 final class TrainingPlannerStore: ObservableObject {
 
-    @Published private(set) var plansByDayKey: [String: TrainingPlan] = [:]
+    // ✅ muchas sesiones por día (plan_sesiones)
+    @Published private(set) var sessionsByDayKey: [String: [PlannedSession]] = [:]
     @Published private(set) var isLoading = false
 
-    // ✅ SOLO este service (no TrainingPlannerSupabaseService)
     private let service: TrainingSupabaseService
     private var autorId: UUID?
 
@@ -30,10 +30,42 @@ final class TrainingPlannerStore: ObservableObject {
         }
     }
 
-    func plan(for date: Date) -> TrainingPlan? {
-        plansByDayKey[dayKey(date)]
+    // MARK: - Date helpers
+
+    func dayKey(_ date: Date) -> String {
+        let comps = cal.dateComponents([.year, .month, .day], from: date)
+        let y = comps.year ?? 0
+        let m = comps.month ?? 0
+        let d = comps.day ?? 0
+        return String(format: "%04d-%02d-%02d", y, m, d)
     }
 
+    // MARK: - Public API (sessions)
+
+    func sessions(for date: Date) -> [PlannedSession] {
+        sessionsByDayKey[dayKey(date)] ?? []
+    }
+
+    func hasSessions(on date: Date) -> Bool {
+        !(sessionsByDayKey[dayKey(date)] ?? []).isEmpty
+    }
+
+    // MARK: - Public API (plan alias para tu UI)
+
+    /// ✅ Para que tu EntrenamientoView pueda usar `planner.plan(for:)`
+    /// Aquí "plan" = la primera sesión del día (si hay varias).
+    func plan(for date: Date) -> PlannedSession? {
+        sessions(for: date).first
+    }
+
+    /// ✅ Para calendarios / puntito "hay plan"
+    func hasPlan(on date: Date) -> Bool {
+        plan(for: date) != nil
+    }
+
+    // MARK: - Load
+
+    /// Carga un rango alrededor de la fecha (para semana/mes)
     func loadRange(around date: Date) async {
         guard let autorId else { return }
         isLoading = true
@@ -43,79 +75,111 @@ final class TrainingPlannerStore: ObservableObject {
         let to = cal.date(byAdding: .day, value: 45, to: date) ?? date
 
         do {
-            let rows = try await service.fetchPlans(autorId: autorId, from: from, to: to)
-            var dict: [String: TrainingPlan] = [:]
+            let rows = try await service.fetchPlannedSessions(autorId: autorId, from: from, to: to)
+
+            var dict: [String: [PlannedSession]] = [:]
             for r in rows {
-                dict[r.fecha] = r.toPlan()
+                let key = r.fechaKey // "YYYY-MM-DD"
+                dict[key, default: []].append(r.toPlannedSession())
             }
-            plansByDayKey = dict
+
+            // ordena por hora (si existe)
+            for (k, list) in dict {
+                dict[k] = list.sorted(by: { $0.sortKey < $1.sortKey })
+            }
+
+            sessionsByDayKey = dict
         } catch {
-            // print("loadRange error:", error)
+            // print("loadRange sessions error:", error)
         }
     }
 
-    func upsert(_ plan: TrainingPlan) async {
+    // MARK: - Session CRUD
+
+    /// Crear / editar una sesión (upsert)
+    func upsertSession(_ session: PlannedSession) async {
         guard let autorId else { return }
 
-        let key = dayKey(plan.date)
-
-        // ✅ OJO: si tu columna "fecha" es DATE, lo mejor es mandar "YYYY-MM-DD"
-        let dto = TrainingSupabaseService.UpsertPlanDTO(
+        let dto = TrainingSupabaseService.UpsertPlannedSessionDTO(
+            id: session.id?.uuidString, // si nil -> crea
             autor_id: autorId.uuidString,
-            fecha: key,
-            tipo: plan.kind.rawValue,
-            rutina_id: nil,
-            rutina_titulo: plan.kind == .rutina ? plan.routineTitle : nil,
-            duracion_minutos: plan.durationMinutes,
-            nota: plan.note,
-            meta: plan.meta
+            fecha: session.fechaKey,    // "YYYY-MM-DD"
+            hora: session.hora,         // "HH:mm:ss" o nil
+            tipo: session.tipo.rawValue,
+            nombre: session.nombre,
+            icono: session.icono,
+            color: session.color,
+            duracion_minutos: session.duracionMinutos,
+            objetivo: session.objetivo,
+            notas: session.notas,
+            meta: session.meta
         )
 
         do {
-            let saved = try await service.upsertPlan(dto)
-            plansByDayKey[key] = saved.toPlan()
+            let saved = try await service.upsertPlannedSession(dto)
+            let key = saved.fechaKey
+
+            var dayList = sessionsByDayKey[key] ?? []
+            let mapped = saved.toPlannedSession()
+
+            if let idx = dayList.firstIndex(where: { $0.id == mapped.id }) {
+                dayList[idx] = mapped
+            } else {
+                dayList.append(mapped)
+            }
+            dayList.sort(by: { $0.sortKey < $1.sortKey })
+
+            sessionsByDayKey[key] = dayList
         } catch {
-            // print("upsert error:", error)
+            // print("upsertSession error:", error)
         }
     }
 
-    func remove(for date: Date) async {
-        guard let autorId else { return }
-        let key = dayKey(date)
+    /// Eliminar sesión completa (y sus ejercicios por cascade en DB)
+    func deleteSession(sessionId: UUID) async {
+        do {
+            try await service.deletePlannedSession(id: sessionId)
+
+            for (key, list) in sessionsByDayKey {
+                let newList = list.filter { $0.id != sessionId }
+                sessionsByDayKey[key] = newList
+            }
+
+            sessionsByDayKey = sessionsByDayKey.filter { !$0.value.isEmpty }
+        } catch {
+            // print("deleteSession error:", error)
+        }
+    }
+
+    // MARK: - Exercises per session
+
+    func loadSessionExercises(sessionId: UUID) async -> [PlannedSessionExercise] {
+        do {
+            let rows = try await service.fetchPlannedSessionExercises(sessionId: sessionId)
+            return rows.map { $0.toPlannedSessionExercise() }
+        } catch {
+            return []
+        }
+    }
+
+    /// Reemplaza toda la lista de ejercicios de una sesión
+    func replaceSessionExercises(sessionId: UUID, items: [PlannedSessionExercise]) async -> Bool {
+        let dtos: [TrainingSupabaseService.CreatePlannedSessionExerciseDTO] = items.enumerated().map { idx, it in
+            TrainingSupabaseService.CreatePlannedSessionExerciseDTO(
+                sesion_id: sessionId.uuidString,
+                orden: idx,
+                ejercicio_id: it.ejercicioId?.uuidString,
+                nombre_override: it.nombreOverride,
+                objetivo: it.objetivo,
+                notas: it.notas
+            )
+        }
 
         do {
-            try await service.deletePlan(autorId: autorId, dateKey: key)
-            plansByDayKey.removeValue(forKey: key)
+            try await service.replacePlannedSessionExercises(sessionId: sessionId, items: dtos)
+            return true
         } catch {
-            // print("remove error:", error)
+            return false
         }
-    }
-
-    // MARK: - Helpers
-
-    func dayKey(_ date: Date) -> String {
-        let comps = cal.dateComponents([.year, .month, .day], from: date)
-        let y = comps.year ?? 0
-        let m = comps.month ?? 0
-        let d = comps.day ?? 0
-        return String(format: "%04d-%02d-%02d", y, m, d)
-    }
-}
-
-// MARK: - DBPlan -> TrainingPlan mapping
-
-private extension DBPlan {
-    func toPlan() -> TrainingPlan {
-        // fecha viene "YYYY-MM-DD"
-        let date = ISO8601DateFormatter().date(from: fecha + "T00:00:00Z") ?? Date()
-        return TrainingPlan(
-            id: id,
-            date: date,
-            kind: TrainingPlanKind(rawValue: tipo) ?? .gimnasio,
-            routineTitle: rutina_titulo,
-            durationMinutes: duracion_minutos,
-            note: nota,
-            meta: meta
-        )
     }
 }

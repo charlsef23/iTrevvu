@@ -34,25 +34,32 @@ struct TrainingCalendarCard: View {
         }
         .padding(14)
         .background(TrainingBrand.card)
-        .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner))
         .overlay(
-            RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
+            RoundedRectangle(cornerRadius: TrainingBrand.corner)
                 .strokeBorder(TrainingBrand.separator, lineWidth: 1)
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.9), value: mode)
+
         .sheet(isPresented: $showPlanSheet) {
-            PlanTrainingSheet(date: selectedDate, existing: planner.plan(for: selectedDate))
-                .environmentObject(planner)
+            PlanTrainingSheet(
+                date: selectedDate,
+                existing: planner.sessions(for: selectedDate).first
+            )
         }
+
         .onAppear {
             monthCursor = selectedDate
         }
+
         .onChange(of: selectedDate) { _, newValue in
             if mode == .month {
                 monthCursor = newValue
             }
         }
     }
+
+    // MARK: - Header
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -70,7 +77,7 @@ struct TrainingCalendarCard: View {
             Button {
                 showPlanSheet = true
             } label: {
-                Text(planner.plan(for: selectedDate) == nil ? "Planificar" : "Editar")
+                Text(planner.hasSessions(on: selectedDate) ? "Editar" : "Planificar")
                     .font(.subheadline.weight(.semibold))
             }
             .foregroundStyle(TrainingBrand.stats)
@@ -81,7 +88,9 @@ struct TrainingCalendarCard: View {
                     mode = (mode == .week) ? .month : .week
                 }
             } label: {
-                Image(systemName: mode == .week ? "rectangle.grid.2x2" : "rectangle.compress.vertical")
+                Image(systemName: mode == .week
+                      ? "rectangle.grid.2x2"
+                      : "rectangle.compress.vertical")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 8)
@@ -99,12 +108,10 @@ struct TrainingCalendarCard: View {
                     date: day,
                     isSelected: isSameDay(day, selectedDate),
                     isToday: isSameDay(day, .now),
-                    hasPlan: planner.plan(for: day) != nil
+                    hasPlan: planner.hasSessions(on: day)
                 )
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        selectedDate = day
-                    }
+                    selectedDate = day
                 }
             }
         }
@@ -117,22 +124,17 @@ struct TrainingCalendarCard: View {
 
             HStack {
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        monthCursor = cal.date(byAdding: .month, value: -1, to: monthCursor) ?? monthCursor
-                    }
+                    monthCursor = cal.date(byAdding: .month, value: -1, to: monthCursor) ?? monthCursor
                 } label: {
                     Image(systemName: "chevron.left")
-                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
 
                 Button("Hoy") {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        selectedDate = .now
-                        monthCursor = .now
-                    }
+                    selectedDate = .now
+                    monthCursor = .now
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(TrainingBrand.stats)
@@ -141,20 +143,16 @@ struct TrainingCalendarCard: View {
                 Spacer()
 
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                        monthCursor = cal.date(byAdding: .month, value: 1, to: monthCursor) ?? monthCursor
-                    }
+                    monthCursor = cal.date(byAdding: .month, value: 1, to: monthCursor) ?? monthCursor
                 } label: {
                     Image(systemName: "chevron.right")
-                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
 
-            // Header L M X J V S D (lunes primero)
             HStack(spacing: 8) {
-                ForEach(weekdaySymbolsMondayFirst(), id: \.self) { s in
-                    Text(s)
+                ForEach(["L","M","X","J","V","S","D"], id: \.self) {
+                    Text($0)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
@@ -170,19 +168,17 @@ struct TrainingCalendarCard: View {
                         isInDisplayedMonth: cal.isDate(day, equalTo: monthCursor, toGranularity: .month),
                         isSelected: isSameDay(day, selectedDate),
                         isToday: isSameDay(day, .now),
-                        hasPlan: planner.plan(for: day) != nil
+                        hasPlan: planner.hasSessions(on: day)
                     )
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                            selectedDate = day
-                        }
+                        selectedDate = day
                     }
                 }
             }
         }
     }
 
-    // MARK: - Date Helpers
+    // MARK: - Date helpers
 
     private func weekDays(for date: Date) -> [Date] {
         let start = cal.dateInterval(of: .weekOfYear, for: date)?.start ?? date
@@ -190,17 +186,11 @@ struct TrainingCalendarCard: View {
     }
 
     private func monthDays(for date: Date) -> [Date] {
-        // 6x7 = 42 días para grid estable
         guard let monthInterval = cal.dateInterval(of: .month, for: date) else { return [] }
         let firstOfMonth = monthInterval.start
-
-        // weekday: 1..7 (domingo..sábado en muchos locales)
         let weekday = cal.component(.weekday, from: firstOfMonth)
-
-        // shift calculado para firstWeekday=2 (lunes)
         let shift = (weekday - cal.firstWeekday + 7) % 7
         let gridStart = cal.date(byAdding: .day, value: -shift, to: firstOfMonth) ?? firstOfMonth
-
         return (0..<42).compactMap { cal.date(byAdding: .day, value: $0, to: gridStart) }
     }
 
@@ -214,14 +204,11 @@ struct TrainingCalendarCard: View {
         fmt.dateFormat = "LLLL yyyy"
         return fmt.string(from: date).capitalized
     }
-
-    private func weekdaySymbolsMondayFirst() -> [String] {
-        // Forzamos orden L M X J V S D en español (super estable)
-        return ["L", "M", "X", "J", "V", "S", "D"]
-    }
 }
 
-// MARK: - Day UI
+//
+// MARK: - Day UI components
+//
 
 private struct DayPill: View {
     let date: Date
@@ -231,12 +218,12 @@ private struct DayPill: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Text(weekdayLetter(date))
+            Text(weekdayLetter)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(isSelected ? .white : .secondary)
 
             ZStack(alignment: .bottom) {
-                Text(dayNumber(date))
+                Text(dayNumber)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(isSelected ? .white : .primary)
 
@@ -251,26 +238,28 @@ private struct DayPill: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? TrainingBrand.stats : Color.clear)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(isSelected ? TrainingBrand.stats : .clear)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(
-                    isToday && !isSelected ? TrainingBrand.stats.opacity(0.45) : Color.gray.opacity(0.15),
+                    isToday && !isSelected
+                        ? TrainingBrand.stats.opacity(0.45)
+                        : Color.gray.opacity(0.15),
                     lineWidth: 1
                 )
         )
     }
 
-    private func weekdayLetter(_ date: Date) -> String {
+    private var weekdayLetter: String {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "es_ES")
         fmt.dateFormat = "EEEEE"
         return fmt.string(from: date).uppercased()
     }
 
-    private func dayNumber(_ date: Date) -> String {
+    private var dayNumber: String {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "es_ES")
         fmt.dateFormat = "d"
@@ -287,35 +276,35 @@ private struct MonthDayCell: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(isSelected ? TrainingBrand.stats : .clear)
 
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
-                    isToday && !isSelected ? TrainingBrand.stats.opacity(0.45) : Color.gray.opacity(0.12),
+                    isToday && !isSelected
+                        ? TrainingBrand.stats.opacity(0.45)
+                        : Color.gray.opacity(0.12),
                     lineWidth: 1
                 )
 
             VStack(spacing: 6) {
-                Text("\(dayNum(date))")
+                Text("\(Calendar.current.component(.day, from: date))")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isSelected ? .white : (isInDisplayedMonth ? .primary : .secondary.opacity(0.6)))
+                    .foregroundStyle(
+                        isSelected
+                        ? .white
+                        : (isInDisplayedMonth ? .primary : .secondary.opacity(0.6))
+                    )
 
                 if hasPlan && !isSelected {
                     Circle()
                         .fill(TrainingBrand.stats)
                         .frame(width: 5, height: 5)
-                } else {
-                    Spacer().frame(height: 5)
                 }
             }
             .padding(.vertical, 8)
         }
         .frame(height: 42)
         .opacity(isInDisplayedMonth ? 1.0 : 0.55)
-    }
-
-    private func dayNum(_ d: Date) -> Int {
-        Calendar.current.component(.day, from: d)
     }
 }

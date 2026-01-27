@@ -6,7 +6,7 @@ struct EntrenamientoView: View {
     @State private var calendarMode: CalendarDisplayMode = .week
     @State private var showPlanSheet = false
 
-    // ✅ SOLO planner por ahora (fase 1)
+    // ✅ Planner (plan_sesiones -> PlannedSession)
     @StateObject private var planner = TrainingPlannerStore(client: SupabaseManager.shared.client)
 
     var body: some View {
@@ -14,13 +14,14 @@ struct EntrenamientoView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
 
+                    // 📅 Calendario
                     TrainingCalendarCard(
                         selectedDate: $selectedDate,
                         mode: $calendarMode
                     )
                     .environmentObject(planner)
 
-                    // Plan del día
+                    // 📌 Sesión planificada del día (PlannedSession)
                     if let plan = planner.plan(for: selectedDate) {
                         NavigationLink {
                             IniciarEntrenamientoView(plan: plan)
@@ -33,12 +34,12 @@ struct EntrenamientoView: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        EmptyPlanCard {
+                        EmptyPlanCardInline {
                             showPlanSheet = true
                         }
                     }
 
-                    // CTA (siempre)
+                    // ▶️ Entrenamiento libre (siempre)
                     NavigationLink {
                         IniciarEntrenamientoView(plan: nil)
                     } label: {
@@ -130,17 +131,28 @@ struct EntrenamientoView: View {
             .navigationBarTitleDisplayMode(.inline)
 
             // ✅ Ultra limpia (0 espacio arriba)
-            .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+            .toolbar {
+                ToolbarItem(placement: .principal) { EmptyView() }
+            }
 
             .tint(.primary)
+
+            // 📝 Planificar / Editar (usa PlannedSession?)
             .sheet(isPresented: $showPlanSheet) {
-                PlanTrainingSheet(date: selectedDate, existing: planner.plan(for: selectedDate))
-                    .environmentObject(planner)
+                PlanTrainingSheet(
+                    date: selectedDate,
+                    existing: planner.plan(for: selectedDate)
+                )
+                .environmentObject(planner)
             }
+
+            // ⏳ Carga inicial
             .task {
                 await planner.bootstrap()
                 await planner.loadRange(around: selectedDate)
             }
+
+            // 🔄 Cambio de fecha
             .onChange(of: selectedDate) { _, newValue in
                 Task { await planner.loadRange(around: newValue) }
             }
@@ -148,7 +160,7 @@ struct EntrenamientoView: View {
     }
 }
 
-private struct EmptyPlanCard: View {
+private struct EmptyPlanCardInline: View {
     let onPlan: () -> Void
 
     var body: some View {

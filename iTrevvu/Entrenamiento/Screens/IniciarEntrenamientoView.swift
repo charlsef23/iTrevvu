@@ -2,9 +2,9 @@ import SwiftUI
 
 struct IniciarEntrenamientoView: View {
 
-    let plan: TrainingPlan?
+    let plan: PlannedSession?
 
-    init(plan: TrainingPlan? = nil) {
+    init(plan: PlannedSession? = nil) {
         self.plan = plan
     }
 
@@ -27,9 +27,7 @@ struct IniciarEntrenamientoView: View {
                 if let plan {
                     SportHeroCard(
                         title: "Plan de hoy",
-                        subtitle: plan.kind == .rutina
-                            ? (plan.routineTitle ?? "Rutina")
-                            : plan.kind.title,
+                        subtitle: subtitleForPlan(plan),
                         icon: "checkmark.seal.fill",
                         accent: accentForPlan(plan)
                     )
@@ -52,7 +50,7 @@ struct IniciarEntrenamientoView: View {
             await exerciseStore.load(type: .fuerza)
         }
         .onAppear {
-            if let plan { mode = map(plan.kind) }
+            if let plan { mode = map(plan.tipo) }
         }
     }
 
@@ -139,20 +137,33 @@ struct IniciarEntrenamientoView: View {
 
     // MARK: - Helpers
 
-    private func map(_ kind: TrainingPlanKind) -> Mode {
-        switch kind {
-        case .gimnasio, .rutina: return .gimnasio
-        case .cardio: return .cardio
-        case .movilidad: return .movilidad
+    private func subtitleForPlan(_ plan: PlannedSession) -> String {
+        let trimmed = plan.nombre.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return plan.tipo.title
+    }
+
+    private func map(_ tipo: TrainingSessionType) -> Mode {
+        switch tipo {
+        case .gimnasio, .rutina, .hiit, .calistenia, .deporte:
+            return .gimnasio
+        case .cardio:
+            return .cardio
+        case .movilidad, .rehab, .descanso:
+            return .movilidad
         }
     }
 
-    private func accentForPlan(_ plan: TrainingPlan) -> Color {
-        switch plan.kind {
-        case .gimnasio: return TrainingBrand.action
-        case .cardio: return TrainingBrand.cardio
-        case .movilidad: return TrainingBrand.mobility
-        case .rutina: return TrainingBrand.custom
+    private func accentForPlan(_ plan: PlannedSession) -> Color {
+        switch plan.tipo {
+        case .gimnasio, .calistenia:
+            return TrainingBrand.action
+        case .cardio, .hiit:
+            return TrainingBrand.cardio
+        case .movilidad, .rehab, .descanso:
+            return TrainingBrand.mobility
+        case .rutina, .deporte:
+            return TrainingBrand.custom
         }
     }
 
