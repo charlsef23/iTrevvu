@@ -1,28 +1,16 @@
 import SwiftUI
 
 enum TrainingBrand {
-
-    // MARK: - Base (neutros)
     static let bg = Color(.systemGroupedBackground)
-    static let card = Color(.secondarySystemBackground)
-    static let separator = Color.gray.opacity(0.14)
-    static let muted = Color.secondary
-    static let primary = Color.primary
+    static let card = Color(.secondarySystemGroupedBackground)
+    static let separator = Color.black.opacity(0.08)
+    static let corner: CGFloat = 18
 
-    // MARK: - Marca y acentos (pocos, con significado)
-    static let action = Color.red          // CTA / marca
-    static let cardio = Color.orange       // energía
-    static let mobility = Color.green      // recuperación
-    static let stats = Color.blue          // datos
-    static let custom = Color.purple       // personalización
+    static let action = Color.red
+    static let cardio = Color.orange
+    static let mobility = Color.blue
+    static let custom = Color.purple
+    static let stats = Color.pink
 
-    // MARK: - Layout
-    static let corner: CGFloat = 22
-    static let cornerSmall: CGFloat = 16
-
-    // Sombra mínima (para que no “cante”)
-    static let shadow = Color.black.opacity(0.08)
-
-    static func softFill(_ tint: Color) -> Color { tint.opacity(0.10) }
-    static func softStroke(_ tint: Color) -> Color { tint.opacity(0.18) }
+    static func softFill(_ c: Color) -> Color { c.opacity(0.12) }
 }
