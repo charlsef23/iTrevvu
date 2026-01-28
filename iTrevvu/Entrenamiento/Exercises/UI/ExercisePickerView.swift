@@ -5,10 +5,11 @@ struct ExercisePickerView: View {
     enum Mode {
         case browse
         case pick((Exercise) -> Void)
+        case multiPick(([Exercise]) -> Void)
     }
 
     let mode: Mode
-    let type: ExerciseType?   // ✅ opcional: si quieres filtrar por tipo desde fuera
+    let type: ExerciseType?
 
     init(mode: Mode, type: ExerciseType? = nil) {
         self.mode = mode
@@ -21,6 +22,9 @@ struct ExercisePickerView: View {
     @State private var searchText: String = ""
     @State private var onlyFavorites: Bool = false
     @State private var selectedType: ExerciseType = .fuerza
+
+    // ✅ multi-select
+    @State private var selectedIds: Set<UUID> = []
 
     var body: some View {
         NavigationStack {
@@ -49,18 +53,26 @@ struct ExercisePickerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }
                 }
+
+                if case .multiPick = mode {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Listo") { commitMultiPick() }
+                            .disabled(selectedIds.isEmpty)
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if case .multiPick = mode {
+                    multiPickBar
+                }
             }
             .task {
-                // ✅ precarga
                 let t = type ?? selectedType
                 await store.load(type: t)
             }
-            .onChange(of: selectedType) {
+            .onChange(of: selectedType) { _, _ in
                 guard type == nil else { return }
                 Task { await store.load(type: selectedType) }
-            }
-            .onChange(of: searchText) {
-                // nada: filtramos local, no hace falta recargar
             }
         }
     }
@@ -71,6 +83,7 @@ struct ExercisePickerView: View {
         switch mode {
         case .browse: return "Ejercicios"
         case .pick: return "Seleccionar ejercicio"
+        case .multiPick: return "Seleccionar ejercicios"
         }
     }
 
@@ -80,6 +93,7 @@ struct ExercisePickerView: View {
                 ForEach(ExerciseType.allCases) { t in
                     Button {
                         selectedType = t
+                        selectedIds.removeAll()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: t.icon)
@@ -131,8 +145,7 @@ struct ExercisePickerView: View {
     @ViewBuilder
     private var content: some View {
         if store.isLoading {
-            ProgressView()
-                .padding(.top, 24)
+            ProgressView().padding(.top, 24)
         } else {
             let t = type ?? selectedType
             let base = store.byType[t] ?? []
@@ -145,17 +158,47 @@ struct ExercisePickerView: View {
             } else {
                 List {
                     ForEach(results) { ex in
-                        row(for: ex)
+                        pickerRow(for: ex)
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .padding(.horizontal, 8)
             }
         }
     }
+
+    private var multiPickBar: some View {
+        VStack(spacing: 10) {
+            Divider().opacity(0.6)
+
+            Button {
+                commitMultiPick()
+            } label: {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text(selectedIds.isEmpty ? "Selecciona ejercicios" : "Añadir \(selectedIds.count) ejercicio(s)")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                }
+                .foregroundStyle(.white)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(TrainingBrand.stats)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedIds.isEmpty)
+            .opacity(selectedIds.isEmpty ? 0.55 : 1)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+        }
+        .background(TrainingBrand.bg)
+    }
+
+    // MARK: - Logic
 
     private func filterLocal(_ items: [Exercise]) -> [Exercise] {
         var out = items
@@ -179,66 +222,51 @@ struct ExercisePickerView: View {
         }
     }
 
-    private func row(for ex: Exercise) -> some View {
+    private func pickerRow(for ex: Exercise) -> some View {
         Button {
             switch mode {
             case .browse:
                 break
+
             case .pick(let onPick):
                 onPick(ex)
                 dismiss()
+
+            case .multiPick:
+                toggleSelect(ex)
             }
         } label: {
-            HStack(spacing: 12) {
-
-                // ✅ icono según tipo + si es personal (autor_id != nil)
-                let isPersonal = (ex.autor_id != nil)
-
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(TrainingBrand.softFill(isPersonal ? TrainingBrand.custom : TrainingBrand.action))
-
-                    Image(systemName: isPersonal ? "person.fill" : "dumbbell.fill")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(isPersonal ? TrainingBrand.custom : TrainingBrand.action)
-                }
-                .frame(width: 40, height: 40)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(ex.nombre)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-
-                    Text(ex.tipo.title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button {
-                    Task { await store.toggleFavorite(exerciseId: ex.id) }
-                } label: {
-                    Image(systemName: store.isFavorite(ex.id) ? "heart.fill" : "heart")
-                        .foregroundStyle(store.isFavorite(ex.id) ? TrainingBrand.stats : .secondary)
-                }
-                .buttonStyle(.plain)
-
-                if case .pick = mode {
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 6)
-                }
-            }
-            .padding(12)
-            .background(TrainingBrand.card)
-            .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
-                    .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+            ExerciseRowCard(
+                ex: ex,
+                isSelected: selectedIds.contains(ex.id),
+                showSelection: isMultiPick,
+                onFav: { Task { await store.toggleFavorite(exerciseId: ex.id) } },
+                isFav: store.isFavorite(ex.id)
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private var isMultiPick: Bool {
+        if case .multiPick = mode { return true }
+        return false
+    }
+
+    private func toggleSelect(_ ex: Exercise) {
+        if selectedIds.contains(ex.id) {
+            selectedIds.remove(ex.id)
+        } else {
+            selectedIds.insert(ex.id)
+        }
+    }
+
+    private func commitMultiPick() {
+        guard case .multiPick(let onPick) = mode else { return }
+        let t = type ?? selectedType
+        let base = store.byType[t] ?? []
+        let results = filterLocal(base)
+        let picked = results.filter { selectedIds.contains($0.id) }
+        onPick(picked)
+        dismiss()
     }
 }

@@ -2,8 +2,14 @@ import SwiftUI
 
 struct ExerciseTypeView: View {
     let type: ExerciseType
-    @StateObject private var store = ExerciseStore()
+
+    var onStartWithExercises: (([Exercise]) -> Void)? = nil
+
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: ExerciseStore
+
     @State private var search = ""
+    @State private var selectedIds: Set<UUID> = []
 
     private var exercises: [Exercise] { store.byType[type] ?? [] }
 
@@ -19,36 +25,85 @@ struct ExerciseTypeView: View {
                 Text(msg).foregroundStyle(.secondary).padding()
                 Spacer()
             } else {
-                List {
-                    let favs = exercises.filter { store.isFavorite($0.id) }
-                    if !favs.isEmpty {
-                        Section("Favoritos") {
-                            ForEach(favs) { ex in
-                                row(ex)
-                            }
-                        }
-                    }
+                let results = localFilter(exercises, search: search)
 
-                    Section(type.title) {
-                        ForEach(exercises) { ex in
-                            row(ex)
+                List {
+                    ForEach(results) { ex in
+                        Button {
+                            toggle(ex)
+                        } label: {
+                            ExerciseRowCard(
+                                ex: ex,
+                                isSelected: selectedIds.contains(ex.id),
+                                showSelection: true,
+                                onFav: { Task { await store.toggleFavorite(exerciseId: ex.id) } },
+                                isFav: store.isFavorite(ex.id)
+                            )
                         }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(TrainingBrand.bg)
         .navigationTitle(type.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if onStartWithExercises != nil {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Añadir") { commit() }
+                        .disabled(selectedIds.isEmpty)
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if onStartWithExercises != nil {
+                bottomBar
+            }
+        }
         .task { await store.load(type: type) }
         .onChange(of: search) { _, newValue in
             Task {
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 if newValue == search {
+                    // si tu store soporta server search úsalo, si no, quítalo:
                     await store.load(type: type, search: newValue.isEmpty ? nil : newValue)
                 }
             }
         }
+    }
+
+    private var bottomBar: some View {
+        VStack(spacing: 10) {
+            Divider().opacity(0.6)
+
+            Button {
+                commit()
+            } label: {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Añadir \(selectedIds.count) ejercicio(s)")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                }
+                .foregroundStyle(.white)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(TrainingBrand.stats)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedIds.isEmpty)
+            .opacity(selectedIds.isEmpty ? 0.55 : 1)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+        }
+        .background(TrainingBrand.bg)
     }
 
     private var searchBar: some View {
@@ -75,22 +130,28 @@ struct ExerciseTypeView: View {
         .padding(16)
     }
 
-    private func row(_ ex: Exercise) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(ex.nombre).font(.headline)
-                Text((ex.musculo_principal ?? "—") + " · " + ex.tipo_medicion.title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                Task { await store.toggleFavorite(exerciseId: ex.id) }
-            } label: {
-                Image(systemName: store.isFavorite(ex.id) ? "heart.fill" : "heart")
-                    .foregroundStyle(store.isFavorite(ex.id) ? TrainingBrand.stats : .secondary)
-            }
-            .buttonStyle(.plain)
+    private func toggle(_ ex: Exercise) {
+        if selectedIds.contains(ex.id) { selectedIds.remove(ex.id) }
+        else { selectedIds.insert(ex.id) }
+    }
+
+    private func commit() {
+        guard let cb = onStartWithExercises else { return }
+        let picked = exercises.filter { selectedIds.contains($0.id) }
+        cb(picked)
+        dismiss()
+    }
+
+    private func localFilter(_ items: [Exercise], search: String) -> [Exercise] {
+        let s = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return items }
+        let needle = s.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+
+        return items.filter { ex in
+            let name = ex.nombre.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+            if name.contains(needle) { return true }
+            let aliases = (ex.aliases ?? []).map { $0.folding(options: .diacriticInsensitive, locale: .current).lowercased() }
+            return aliases.contains(where: { $0.contains(needle) })
         }
     }
 }
