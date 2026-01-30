@@ -8,22 +8,35 @@ struct PlanTrainingSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var planner: TrainingPlannerStore
 
+    // Tipo real del modelo
     @State private var kind: TrainingSessionType = .gimnasio
+
+    // ✅ Nombre arriba
     @State private var title: String = ""
+
     @State private var duration: Int = 45
     @State private var note: String = ""
 
-    // Meta UI
-    @State private var goal: PlanGoal? = nil
-    @State private var rpeTarget: Double = 7.0
-    @State private var useRPE: Bool = false
+    // ✅ Repetición
+    @State private var repeatEnabled: Bool = false
+    @State private var repeatWeekdays: Set<Int> = [1,2,3,4,5] // 1=Lunes ... 7=Domingo
+    @State private var repeatEndEnabled: Bool = false
+    @State private var repeatEndDate: Date = .now
+    @State private var repeatTimeEnabled: Bool = true
+    @State private var repeatTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: .now) ?? .now
 
+    // UX
     @State private var isSaving = false
+    @State private var showValidation = false
+    @State private var showNamePicker = false
 
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
+
+                    // ✅ Nombre arriba del todo + reutilizables
+                    nameTopCard
 
                     summaryCard
 
@@ -31,16 +44,13 @@ struct PlanTrainingSheet: View {
                         kindGrid
                     }
 
-                    sectionCard(title: "Nombre", icon: "textformat", tint: accentForKind(kind)) {
-                        nameEditor
-                    }
-
                     sectionCard(title: "Detalles", icon: "clock.fill", tint: accentForKind(kind)) {
                         durationEditor
                     }
 
-                    sectionCard(title: "Objetivo", icon: "target", tint: TrainingBrand.stats) {
-                        goalEditor
+                    // ✅ Repetir por días
+                    sectionCard(title: "Repetir", icon: "arrow.triangle.2.circlepath", tint: TrainingBrand.stats) {
+                        repeatEditor
                     }
 
                     sectionCard(title: "Notas", icon: "note.text", tint: .secondary) {
@@ -71,6 +81,54 @@ struct PlanTrainingSheet: View {
             }
         }
         .onAppear { hydrate() }
+        .sheet(isPresented: $showNamePicker) {
+            RecentNamesSheet(
+                names: RecentPlanNamesStore.load(),
+                onPick: { picked in
+                    title = picked
+                    showNamePicker = false
+                },
+                onClearAll: {
+                    RecentPlanNamesStore.clear()
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Nombre top
+
+    private var nameTopCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+
+            HStack {
+                Text("Nombre")
+                    .font(.headline.bold())
+
+                Spacer()
+
+                Button {
+                    showNamePicker = true
+                } label: {
+                    Label("Reutilizar", systemImage: "clock.arrow.circlepath")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(TrainingBrand.stats)
+                .buttonStyle(.plain)
+            }
+
+            TextField("Ej: Pierna · Hipertrofia", text: $title)
+                .padding(12)
+                .background(Color.gray.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .padding(14)
+        .background(TrainingBrand.card)
+        .clipShape(RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TrainingBrand.corner, style: .continuous)
+                .strokeBorder(TrainingBrand.separator, lineWidth: 1)
+        )
     }
 
     // MARK: - Summary
@@ -105,8 +163,10 @@ struct PlanTrainingSheet: View {
                 Pill(text: titleForKind(kind), tint: accentForKind(kind))
                 Pill(text: titleTrimmed.isEmpty ? "Sesión" : titleTrimmed, tint: .secondary)
                 Pill(text: "\(duration) min", tint: .secondary)
-                if let goal { Pill(text: goal.title, tint: TrainingBrand.stats) }
-                if useRPE { Pill(text: "RPE \(String(format: "%.1f", rpeTarget))", tint: TrainingBrand.stats) }
+
+                if repeatEnabled {
+                    Pill(text: "Repite", tint: TrainingBrand.stats)
+                }
             }
         }
         .padding(14)
@@ -137,7 +197,9 @@ struct PlanTrainingSheet: View {
                 }
                 .frame(width: 32, height: 32)
 
-                Text(title).font(.headline.bold())
+                Text(title)
+                    .font(.headline.bold())
+
                 Spacer()
             }
 
@@ -153,10 +215,13 @@ struct PlanTrainingSheet: View {
     }
 
     private var deleteCard: some View {
-        Button(role: .destructive) { Task { await deleteSession() } } label: {
+        Button(role: .destructive) {
+            Task { await deleteSession() }
+        } label: {
             HStack {
                 Image(systemName: "trash.fill")
-                Text("Eliminar sesión").font(.headline.weight(.semibold))
+                Text("Eliminar sesión")
+                    .font(.headline.weight(.semibold))
                 Spacer()
             }
             .padding(14)
@@ -171,71 +236,66 @@ struct PlanTrainingSheet: View {
     private var kindGrid: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                KindTile("Gimnasio", "Fuerza", "dumbbell.fill", TrainingBrand.action, kind == .gimnasio) { kind = .gimnasio }
-                KindTile("Cardio", "Tiempo", "figure.run", TrainingBrand.cardio, kind == .cardio) { kind = .cardio }
+                KindTile("Gimnasio", "Fuerza", "dumbbell.fill", TrainingBrand.action, kind == .gimnasio) {
+                    kind = .gimnasio
+                }
+                KindTile("Cardio", "Tiempo", "figure.run", TrainingBrand.cardio, kind == .cardio) {
+                    kind = .cardio
+                }
             }
 
             HStack(spacing: 10) {
-                KindTile("Movilidad", "Recuperación", "figure.cooldown", TrainingBrand.mobility, kind == .movilidad) { kind = .movilidad }
-                KindTile("HIIT", "Intervalos", "bolt.fill", TrainingBrand.cardio, kind == .hiit) { kind = .hiit }
+                KindTile("Movilidad", "Recuperación", "figure.cooldown", TrainingBrand.mobility, kind == .movilidad) {
+                    kind = .movilidad
+                }
+                KindTile("Rutina", "Plantilla", "list.bullet", TrainingBrand.custom, kind == .rutina) {
+                    kind = .rutina
+                }
             }
-
-            HStack(spacing: 10) {
-                KindTile("Calistenia", "Peso corporal", "figure.strengthtraining.traditional", TrainingBrand.action, kind == .calistenia) { kind = .calistenia }
-                KindTile("Deporte", "Partido", "sportscourt.fill", TrainingBrand.custom, kind == .deporte) { kind = .deporte }
-            }
-
-            HStack(spacing: 10) {
-                KindTile("Rehab", "Lesión", "cross.case.fill", TrainingBrand.mobility, kind == .rehab) { kind = .rehab }
-                KindTile("Descanso", "Off", "bed.double.fill", .secondary, kind == .descanso) { kind = .descanso }
-            }
-
-            // Rutina (plantilla)
-            KindTile("Rutina", "Plantilla", "list.bullet.rectangle", TrainingBrand.custom, kind == .rutina) { kind = .rutina }
         }
-    }
-
-    private var nameEditor: some View {
-        TextField("Nombre de la sesión", text: $title)
-            .padding(12)
-            .background(Color.gray.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private var durationEditor: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Stepper("Duración: \(duration) min", value: $duration, in: 5...600, step: 5)
-                .padding(12)
-                .background(Color.gray.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            Toggle(isOn: $useRPE) {
-                Text("Objetivo de esfuerzo (RPE)")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .tint(TrainingBrand.stats)
-
-            if useRPE {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("RPE: \(String(format: "%.1f", rpeTarget))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Slider(value: $rpeTarget, in: 5...10, step: 0.5)
-                }
-                .padding(12)
-                .background(Color.gray.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-        }
+        Stepper("Duración: \(duration) min", value: $duration, in: 10...240, step: 5)
+            .padding(12)
+            .background(Color.gray.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    private var goalEditor: some View {
-        FlowWrap {
-            ForEach(PlanGoal.allCases) { g in
-                SelectChip(g.title, g.systemImage, goal == g) {
-                    goal = (goal == g) ? nil : g
+    private var repeatEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            Toggle("Repetir esta sesión", isOn: $repeatEnabled)
+                .tint(TrainingBrand.stats)
+
+            if repeatEnabled {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Días")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    WeekdayPicker(selected: $repeatWeekdays)
                 }
+
+                Toggle("Hora fija", isOn: $repeatTimeEnabled)
+                    .tint(TrainingBrand.stats)
+
+                if repeatTimeEnabled {
+                    DatePicker("Hora", selection: $repeatTime, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                }
+
+                Toggle("Fin", isOn: $repeatEndEnabled)
+                    .tint(TrainingBrand.stats)
+
+                if repeatEndEnabled {
+                    DatePicker("Hasta", selection: $repeatEndDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                }
+
+                Text("Se guardará como repetición en el plan y se generará automáticamente.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -252,56 +312,66 @@ struct PlanTrainingSheet: View {
 
     private func hydrate() {
         guard let existing else { return }
-
         kind = existing.tipo
         title = existing.nombre
         duration = existing.duracionMinutos ?? 45
         note = existing.notas ?? ""
-
-        // meta
-        if let meta = existing.meta {
-            if let g = meta.goal {
-                // si tu PlanGoal tiene mapping por title, intenta igualarlo
-                goal = PlanGoal.allCases.first(where: { $0.title == g })
-            }
-            if let rpe = meta.rpeTarget {
-                useRPE = true
-                rpeTarget = rpe
-            }
-        }
     }
 
     private func saveSession() async {
-        if titleTrimmed.isEmpty { return }
+        let name = titleTrimmed
+        if name.isEmpty {
+            showValidation = true
+            return
+        }
+
         isSaving = true
         defer { isSaving = false }
 
-        let mergedTags = existing?.meta?.tags
+        // ✅ guarda nombre para reutilizar
+        RecentPlanNamesStore.append(name)
 
-        let meta = SessionMeta(
-            goal: goal?.title,
-            rpeTarget: useRPE ? rpeTarget : nil,
-            tags: mergedTags
-        )
-
+        // 1) Guardar sesión del día (plan_sesiones)
         let session = PlannedSession(
-            id: existing?.id ?? nil, // nil => insert
-            autorId: existing?.autorId,
+            id: existing?.id ?? UUID(),
             date: date,
             hora: existing?.hora ?? "09:00:00",
             tipo: kind,
-            nombre: titleTrimmed,
+            nombre: name,
             icono: iconForKind(kind),
             color: colorTokenForKind(kind),
             duracionMinutos: duration,
-            objetivo: nil,
+            objetivo: nil, // ✅ eliminado
             notas: noteTrimmed.isEmpty ? nil : noteTrimmed,
-            meta: meta,
-            createdAt: existing?.createdAt,
-            updatedAt: existing?.updatedAt
+            meta: existing?.meta
         )
 
         await planner.upsertSession(session)
+
+        // 2) Si repetición activa, guardar regla (plan_repeticiones)
+        if repeatEnabled {
+            let hour = Calendar.current.component(.hour, from: repeatTime)
+            let minute = Calendar.current.component(.minute, from: repeatTime)
+            let horaString = repeatTimeEnabled ? String(format: "%02d:%02d:00", hour, minute) : nil
+
+            let end = repeatEndEnabled ? repeatEndDate : nil
+
+            await planner.upsertRepeatPlan(
+                template: .init(
+                    tipo: kind.rawValue,
+                    nombre: name,
+                    icono: iconForKind(kind),
+                    color: colorTokenForKind(kind),
+                    duracion_minutos: duration,
+                    notas: noteTrimmed.isEmpty ? nil : noteTrimmed
+                ),
+                startDate: date,
+                endDate: end,
+                byweekday: Array(repeatWeekdays).sorted(),
+                hora: horaString
+            )
+        }
+
         dismiss()
     }
 
@@ -323,7 +393,7 @@ struct PlanTrainingSheet: View {
         return f.string(from: d).capitalized
     }
 
-    // MARK: - Switches (EXHAUSTIVOS)
+    // MARK: - Switches
 
     private func titleForKind(_ k: TrainingSessionType) -> String {
         switch k {
@@ -344,7 +414,7 @@ struct PlanTrainingSheet: View {
         case .gimnasio: return "dumbbell.fill"
         case .cardio: return "figure.run"
         case .movilidad: return "figure.cooldown"
-        case .rutina: return "list.bullet.rectangle"
+        case .rutina: return "list.bullet"
         case .hiit: return "bolt.fill"
         case .calistenia: return "figure.strengthtraining.traditional"
         case .deporte: return "sportscourt.fill"
@@ -372,97 +442,75 @@ struct PlanTrainingSheet: View {
     }
 }
 
-// MARK: - Small UI components (mismos que ya usabas)
+// MARK: - Repeat template DTO
 
-private struct KindTile: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let tint: Color
-    let isOn: Bool
-    let action: () -> Void
-
-    init(_ title: String, _ subtitle: String, _ icon: String, _ tint: Color, _ isOn: Bool, action: @escaping () -> Void) {
-        self.title = title
-        self.subtitle = subtitle
-        self.icon = icon
-        self.tint = tint
-        self.isOn = isOn
-        self.action = action
+extension PlanTrainingSheet {
+    struct RepeatTemplate: Codable {
+        let tipo: String
+        let nombre: String
+        let icono: String
+        let color: String
+        let duracion_minutos: Int
+        let notas: String?
     }
+}
+
+// MARK: - Weekday Picker
+
+private struct WeekdayPicker: View {
+    @Binding var selected: Set<Int> // 1...7 (L..D)
+
+    private let items: [(Int, String)] = [
+        (1,"L"), (2,"M"), (3,"X"), (4,"J"), (5,"V"), (6,"S"), (7,"D")
+    ]
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(tint)
-                VStack(alignment: .leading) {
-                    Text(title).bold()
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            ForEach(items, id: \.0) { (day, label) in
+                Button {
+                    if selected.contains(day) { selected.remove(day) }
+                    else { selected.insert(day) }
+                } label: {
+                    Text(label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(selected.contains(day) ? .white : .primary)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(selected.contains(day) ? TrainingBrand.stats : Color.gray.opacity(0.10)))
                 }
-                Spacer()
-                if isOn {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(tint)
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+// MARK: - Recent names sheet
+
+private struct RecentNamesSheet: View {
+    let names: [String]
+    let onPick: (String) -> Void
+    let onClearAll: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if names.isEmpty {
+                    Text("Aún no hay nombres guardados.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(names, id: \.self) { n in
+                        Button { onPick(n) } label: {
+                            Text(n)
+                        }
+                    }
+                    Button(role: .destructive) {
+                        onClearAll()
+                    } label: {
+                        Text("Borrar historial")
+                    }
                 }
             }
-            .padding(12)
-            .background(isOn ? tint.opacity(0.12) : Color.gray.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct Pill: View {
-    let text: String
-    let tint: Color
-
-    var body: some View {
-        Text(text)
-            .font(.caption.bold())
-            .foregroundStyle(tint == .secondary ? .primary : tint)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
-            .background(Capsule().fill(tint.opacity(0.15)))
-    }
-}
-
-private struct SelectChip: View {
-    let title: String
-    let icon: String
-    let isOn: Bool
-    let action: () -> Void
-
-    init(_ title: String, _ icon: String, _ isOn: Bool, action: @escaping () -> Void) {
-        self.title = title
-        self.icon = icon
-        self.isOn = isOn
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                Text(title)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(isOn ? TrainingBrand.stats : Color.gray.opacity(0.15))
-            .foregroundStyle(isOn ? .white : .primary)
-            .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct FlowWrap<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 10)], spacing: 10) {
-            content
+            .navigationTitle("Reutilizar nombre")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

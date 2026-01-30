@@ -5,8 +5,12 @@ import Supabase
 @MainActor
 final class TrainingPlannerStore: ObservableObject {
 
+    // MARK: - Published
+
     @Published private(set) var sessionsByDayKey: [String: [PlannedSession]] = [:]
     @Published private(set) var isLoading = false
+
+    // MARK: - Private
 
     private let service: TrainingPlannerSupabaseService
     private var autorId: UUID?
@@ -17,13 +21,17 @@ final class TrainingPlannerStore: ObservableObject {
         return c
     }()
 
+    // MARK: - Init
+
     init(client: SupabaseClient) {
         self.service = TrainingPlannerSupabaseService(client: client)
     }
 
+    // MARK: - Bootstrap
+
     func bootstrap() async {
         do {
-            autorId = try service.currentUserId()
+            autorId = try service.currentUserId()   // ⚠️ este método NO debe ser private en el service
         } catch {
             autorId = nil
         }
@@ -73,7 +81,7 @@ final class TrainingPlannerStore: ObservableObject {
 
             sessionsByDayKey = dict
         } catch {
-            // opcional: log
+            // opcional: print(error)
         }
     }
 
@@ -111,7 +119,7 @@ final class TrainingPlannerStore: ObservableObject {
             list.sort(by: { $0.sortKey < $1.sortKey })
             sessionsByDayKey[key] = list
         } catch {
-            // opcional: log
+            // opcional: print(error)
         }
     }
 
@@ -124,7 +132,7 @@ final class TrainingPlannerStore: ObservableObject {
             }
             sessionsByDayKey = sessionsByDayKey.filter { !$0.value.isEmpty }
         } catch {
-            // opcional: log
+            // opcional: print(error)
         }
     }
 
@@ -156,6 +164,34 @@ final class TrainingPlannerStore: ObservableObject {
             return true
         } catch {
             return false
+        }
+    }
+
+    // MARK: - Repeticiones (plan_repeticiones)
+
+    func upsertRepeatPlan(
+        template: PlanTrainingSheet.RepeatTemplate,
+        startDate: Date,
+        endDate: Date?,
+        byweekday: [Int],
+        hora: String?
+    ) async {
+        do {
+            // por si se llama antes de bootstrap()
+            if autorId == nil {
+                autorId = try service.currentUserId()
+            }
+            guard autorId != nil else { return }
+
+            await service.upsertRepeatPlan(
+                template: template,
+                startDate: startDate,
+                endDate: endDate,
+                byweekday: byweekday,
+                hora: hora
+            )
+        } catch {
+            // opcional: print(error)
         }
     }
 }

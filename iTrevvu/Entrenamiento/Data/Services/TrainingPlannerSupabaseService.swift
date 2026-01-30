@@ -1,20 +1,61 @@
 import Foundation
 import Supabase
 
+@MainActor
 final class TrainingPlannerSupabaseService {
-    let client: SupabaseClient
+
+    private let client: SupabaseClient
 
     init(client: SupabaseClient) {
         self.client = client
     }
 
-    // MARK: - Auth
     func currentUserId() throws -> UUID {
         guard let session = client.auth.currentSession else {
-            throw NSError(domain: "TrainingPlannerSupabaseService", code: 401,
-                          userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+            throw NSError(domain: "Planner", code: 401, userInfo: [NSLocalizedDescriptionKey: "No hay sesión"])
         }
         return session.user.id
+    }
+
+    struct RepeatRow: Encodable {
+        let autor_id: String
+        let template: PlanTrainingSheet.RepeatTemplate
+        let start_date: String
+        let end_date: String?
+        let byweekday: [Int]
+        let hora: String?
+    }
+
+    func upsertRepeatPlan(
+        template: PlanTrainingSheet.RepeatTemplate,
+        startDate: Date,
+        endDate: Date?,
+        byweekday: [Int],
+        hora: String?
+    ) async {
+        do {
+            let autorId = try currentUserId()
+
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd"
+
+            let dto = RepeatRow(
+                autor_id: autorId.uuidString,
+                template: template,
+                start_date: df.string(from: startDate),
+                end_date: endDate.map { df.string(from: $0) },
+                byweekday: byweekday,
+                hora: hora
+            )
+
+            _ = try await client
+                .from("plan_repeticiones")
+                .insert(dto)
+                .execute()
+
+        } catch {
+            // no bloqueamos UI, pero si quieres: print(error)
+        }
     }
 
     // MARK: - Planned Sessions

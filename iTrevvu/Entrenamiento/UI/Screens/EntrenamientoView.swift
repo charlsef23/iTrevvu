@@ -16,8 +16,6 @@ struct EntrenamientoView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
 
-                    topHeader
-
                     TrainingCalendarCard(
                         selectedDate: $selectedDate,
                         mode: $calendarMode,
@@ -42,7 +40,7 @@ struct EntrenamientoView: View {
             // ✅ CTA fijo abajo (premium)
             .safeAreaInset(edge: .bottom) {
                 TrainingBottomCTA(
-                    title: planToTrain == nil ? "Entrenar ahora" : "Entrenar ahora",
+                    title: "Entrenar ahora",
                     subtitle: bottomSubtitle,
                     systemImage: "play.fill",
                     isEnabled: true,
@@ -81,22 +79,6 @@ struct EntrenamientoView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Header
-
-    private var topHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Entrenar")
-                .font(.largeTitle.bold())
-                .foregroundStyle(.primary)
-
-            Text("Planifica tu sesión o empieza una rápida.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 2)
     }
 
     // MARK: - Plan del día
@@ -160,7 +142,6 @@ struct EntrenamientoView: View {
                 .buttonStyle(.plain)
 
                 NavigationLink {
-                    // tu pantalla de historial real cuando la tengas
                     Text("Historial (pendiente)")
                         .foregroundStyle(.secondary)
                         .padding()
