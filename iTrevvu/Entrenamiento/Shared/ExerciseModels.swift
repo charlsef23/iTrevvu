@@ -1,7 +1,15 @@
 import Foundation
 
-enum ExerciseType: String, Codable, CaseIterable, Identifiable {
-    case fuerza, calistenia, cardio, hiit, core, movilidad, rehab, deporte, rutinas
+enum ExerciseType: String, CaseIterable, Identifiable, Codable {
+    case fuerza
+    case calistenia
+    case cardio
+    case hiit
+    case core
+    case movilidad
+    case rehab
+    case deporte
+    case rutinas
 
     var id: String { rawValue }
 
@@ -25,18 +33,21 @@ enum ExerciseType: String, Codable, CaseIterable, Identifiable {
         case .calistenia: return "figure.strengthtraining.traditional"
         case .cardio: return "figure.run"
         case .hiit: return "bolt.fill"
-        case .core: return "circle.grid.cross"
+        case .core: return "circle.grid.cross.fill"
         case .movilidad: return "figure.cooldown"
         case .rehab: return "cross.case.fill"
         case .deporte: return "sportscourt.fill"
-        case .rutinas: return "list.bullet.rectangle"
+        case .rutinas: return "list.bullet.rectangle.portrait"
         }
     }
 }
 
-enum MeasurementType: String, Codable, CaseIterable, Identifiable {
-    case peso_reps, reps, tiempo, distancia, calorias
-    var id: String { rawValue }
+enum ExerciseMeasurementType: String, Codable {
+    case peso_reps
+    case reps
+    case tiempo
+    case distancia
+    case calorias
 
     var title: String {
         switch self {
@@ -49,25 +60,21 @@ enum MeasurementType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Modelo “App” que usas en UI.
 struct Exercise: Identifiable, Codable, Hashable {
     let id: UUID
     let tipo: ExerciseType
     let nombre: String
-
-    let aliases: [String]?
+    let aliases: [String]
     let descripcion: String?
-
     let musculo_principal: String?
-    let musculos_secundarios: [String]?
-    let equipo: [String]?
+    let musculos_secundarios: [String]
+    let equipo: [String]
     let patron: String?
-
-    let tipo_medicion: MeasurementType
+    let tipo_medicion: ExerciseMeasurementType
     let video_url: String?
-
     let es_publico: Bool
     let autor_id: UUID?
-
     let created_at: Date?
     let updated_at: Date?
 }

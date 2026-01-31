@@ -18,7 +18,7 @@ struct IniciarEntrenamientoView: View {
     @State private var mode: Mode = .gimnasio
 
     @StateObject private var exerciseStore = ExerciseStore(client: SupabaseManager.shared.client)
-    @StateObject private var sessionStore = TrainingSessionStore()
+    @StateObject private var sessionStore = TrainingSessionStore(client: SupabaseManager.shared.client)
 
     @State private var selected: [Exercise] = []
     @State private var showPicker = false
