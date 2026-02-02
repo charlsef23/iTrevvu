@@ -1,46 +1,53 @@
 import Foundation
 
-// MARK: - DB Rows (DTO) para Supabase
-// Ajusta nombres de tabla/columnas si los tuyos difieren.
-// Esto está diseñado para mapear a los modelos Domain de arriba.
+// MARK: - Rows (DB -> Swift) aligned with Supabase tables
+// Tablas:
+// - sesiones_entrenamiento
+// - sesion_items
+// - sesion_sets
 
+// sesiones_entrenamiento
 struct DBTrainingSession: Codable, Identifiable {
     let id: UUID
     let autor_id: UUID
 
-    let started_at: Date
-    let ended_at: Date?
+    let fecha: String                 // "YYYY-MM-DD"
+    let tipo: String                  // enum rawValue
+    let plan_sesion_id: UUID?
 
-    let titulo: String
-    let tipo: String
+    let titulo: String?
+    let notas: String?
+    let duracion_minutos: Int?
+
+    let estado: String                // "en_progreso" | "finalizada" | "cancelada"
+    let started_at: Date?
+    let ended_at: Date?
 
     let created_at: Date?
     let updated_at: Date?
 }
 
+// sesion_items
 struct DBTrainingSessionItem: Codable, Identifiable {
     let id: UUID
     let sesion_id: UUID
     let orden: Int
 
     let ejercicio_id: UUID?
-    let nombre_snapshot: String?
-    let tipo: String
-
+    let nombre_snapshot: String
     let notas: String?
 
     let created_at: Date?
-    let updated_at: Date?
 }
 
-struct DBTrainingSessionSet: Codable, Identifiable {
+// sesion_sets
+struct DBTrainingSet: Codable, Identifiable {
     let id: UUID
     let sesion_item_id: UUID
     let orden: Int
 
     let reps: Int?
     let peso_kg: Double?
-    let rpe: Double?
     let tiempo_seg: Int?
     let distancia_m: Double?
     let completado: Bool
@@ -49,52 +56,76 @@ struct DBTrainingSessionSet: Codable, Identifiable {
     let updated_at: Date?
 }
 
-// MARK: - Mapping DB -> Domain
+
+// MARK: - Mapping helpers (DB -> Domain)
 
 extension DBTrainingSession {
 
-    func toDomain(items: [TrainingSessionItem] = []) -> TrainingSession {
-        TrainingSession(
+    /// OJO: tu `TrainingSession` NO acepta createdAt/updatedAt → los quitamos.
+    func toDomain() -> TrainingSession {
+        let day = Self.parseDay(fecha)
+
+        return TrainingSession(
             id: id,
             autorId: autor_id,
-            startedAt: started_at,
-            endedAt: ended_at,
-            titulo: titulo,
+            fecha: day,
             tipo: TrainingSessionType(rawValue: tipo) ?? .gimnasio,
-            items: items
+            planSesionId: plan_sesion_id,
+            titulo: titulo,
+            notas: notas,
+            duracionMinutos: duracion_minutos,
+            estado: TrainingSessionState(rawValue: estado) ?? .en_progreso,
+            startedAt: started_at ?? Date(),
+            endedAt: ended_at
         )
+    }
+
+    /// "YYYY-MM-DD" -> Date (UTC midnight)
+    private static func parseDay(_ yyyyMMdd: String) -> Date {
+        let parts = yyyyMMdd.split(separator: "-")
+        guard parts.count == 3,
+              let y = Int(parts[0]),
+              let m = Int(parts[1]),
+              let d = Int(parts[2]) else { return Date() }
+
+        var comps = DateComponents()
+        comps.calendar = Calendar(identifier: .gregorian)
+        comps.timeZone = TimeZone(secondsFromGMT: 0)
+        comps.year = y
+        comps.month = m
+        comps.day = d
+        return comps.date ?? Date()
     }
 }
 
 extension DBTrainingSessionItem {
 
-    /// Convierte un row item + sus sets (rows) a dominio.
-    func toDomain(sets: [DBTrainingSessionSet] = []) -> TrainingSessionItem {
-        let exType = ExerciseType(rawValue: tipo) ?? .fuerza
-
-        let mappedSets: [TrainingSet] = sets
-            .sorted(by: { $0.orden < $1.orden })
-            .map {
-                TrainingSet(
-                    orden: $0.orden,
-                    reps: $0.reps,
-                    pesoKg: $0.peso_kg,
-                    rpe: $0.rpe,
-                    tiempoSeg: $0.tiempo_seg,
-                    distanciaM: $0.distancia_m,
-                    completado: $0.completado
-                )
-            }
-
-        return TrainingSessionItem(
+    /// OJO: tu `TrainingSessionItem` exige `sessionId` → lo pasamos aquí.
+    func toDomain(sets: [TrainingSet]) -> TrainingSessionItem {
+        TrainingSessionItem(
             id: id,
             sessionId: sesion_id,
             orden: orden,
-            exerciseId: ejercicio_id,
-            nombre: (nombre_snapshot?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? "Ejercicio",
-            tipo: exType,
+            ejercicioId: ejercicio_id,
+            nombreSnapshot: nombre_snapshot,
             notas: notas,
-            sets: mappedSets
+            sets: sets
+        )
+    }
+}
+
+extension DBTrainingSet {
+
+    /// OJO: `TrainingSet` ya NO tiene rpe → lo quitamos.
+    func toDomain() -> TrainingSet {
+        TrainingSet(
+            id: id,
+            orden: orden,
+            reps: reps,
+            pesoKg: peso_kg,
+            tiempoSeg: tiempo_seg,
+            distanciaM: distancia_m,
+            completado: completado
         )
     }
 }

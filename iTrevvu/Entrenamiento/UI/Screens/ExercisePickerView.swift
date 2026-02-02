@@ -138,7 +138,7 @@ struct ExercisePickerView: View {
             let name = ex.nombre.folding(options: .diacriticInsensitive, locale: .current).lowercased()
             if name.contains(needle) { return true }
 
-            let aliases = (ex.aliases ?? []).map {
+            let aliases = ex.aliases.map {
                 $0.folding(options: .diacriticInsensitive, locale: .current).lowercased()
             }
             return aliases.contains(where: { $0.contains(needle) })

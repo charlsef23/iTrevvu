@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct PlannedWorkoutDayCard: View {
 
@@ -46,7 +47,8 @@ struct PlannedWorkoutDayCard: View {
                     .foregroundStyle(.secondary)
             }
 
-            if let note = plan.notas, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if let note = plan.notas,
+               !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(note)
                     .font(.caption)
                     .foregroundStyle(.secondary)

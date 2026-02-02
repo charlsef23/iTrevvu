@@ -94,6 +94,7 @@ final class TrainingSessionStore: ObservableObject {
 
         var item = TrainingSessionItem(
             id: itemLocalId,
+            sessionId: sessionId,
             orden: orden,
             ejercicioId: exercise.id,
             nombreSnapshot: exercise.nombre,
@@ -124,7 +125,6 @@ final class TrainingSessionStore: ObservableObject {
             orden: setOrden,
             reps: nil,
             pesoKg: nil,
-            rpe: nil,
             tiempoSeg: nil,
             distanciaM: nil,
             completado: false
@@ -164,7 +164,6 @@ final class TrainingSessionStore: ObservableObject {
             orden: setOrden,
             reps: nil,
             pesoKg: nil,
-            rpe: nil,
             tiempoSeg: nil,
             distanciaM: nil,
             completado: false

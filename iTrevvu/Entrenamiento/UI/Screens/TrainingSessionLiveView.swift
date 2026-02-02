@@ -9,30 +9,13 @@ struct TrainingSessionLiveView: View {
     let exercises: [Exercise]
     let accent: Color
 
-    init(
-        store: TrainingSessionStore,
-        mode: IniciarEntrenamientoView.Mode,
-        plan: PlannedSession?,
-        exercises: [Exercise],
-        accent: Color
-    ) {
-        self.store = store
-        self.mode = mode
-        self.plan = plan
-        self.exercises = exercises
-        self.accent = accent
-    }
-
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 14) {
-
                 header
-
                 itemsCard
-
                 Spacer(minLength: 30)
             }
             .padding(16)
@@ -44,24 +27,53 @@ struct TrainingSessionLiveView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Cerrar") { dismiss() }
             }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button(store.isRunning ? "Finalizar" : "Iniciar") {
                     if store.isRunning {
-                        store.stop()
+                        Task { await store.finish() }
                     } else {
-                        store.start(title: planTitleOrDefault)
+                        Task { await startAndSeedIfNeeded() }
                     }
                 }
                 .foregroundStyle(accent)
             }
         }
-        .onAppear {
-            // si vienes desde “Entrenar ahora”, normalmente ya metiste ejercicios en store,
-            // pero si por lo que sea no hay items, los cargamos una vez aquí.
+        .task {
+            // Si vienes desde “Entrenar ahora”, normalmente ya cargaste ejercicios en el store.
+            // Pero si no hay items, arrancamos + sembramos una vez.
             if store.items.isEmpty && !exercises.isEmpty {
-                store.start(title: planTitleOrDefault)
-                exercises.forEach { store.addExercise($0) }
+                await startAndSeedIfNeeded()
             }
+        }
+    }
+
+    // MARK: - Arranque + seed
+
+    private func startAndSeedIfNeeded() async {
+        // 1) start sesión en DB + store
+        await store.start(
+            tipo: sessionTypeForModeOrPlan(),
+            planSesionId: plan?.id,
+            title: planTitleOrDefault
+        )
+
+        // 2) si después de arrancar sigue vacío, sembramos ejercicios
+        guard store.items.isEmpty else { return }
+
+        for ex in exercises {
+            await store.addExercise(ex)
+        }
+    }
+
+    private func sessionTypeForModeOrPlan() -> TrainingSessionType {
+        if let planTipo = plan?.tipo {
+            return planTipo
+        }
+        switch mode {
+        case .gimnasio: return .gimnasio
+        case .cardio: return .cardio
+        case .movilidad: return .movilidad
         }
     }
 
@@ -77,6 +89,7 @@ struct TrainingSessionLiveView: View {
 
                     Text(store.title)
                         .font(.title3.bold())
+                        .lineLimit(1)
                 }
 
                 Spacer()
@@ -92,7 +105,8 @@ struct TrainingSessionLiveView: View {
             }
 
             if let plan {
-                Text("Plan: \(plan.nombre.isEmpty ? plan.tipo.title : plan.nombre)")
+                let t = plan.nombre.trimmingCharacters(in: .whitespacesAndNewlines)
+                Text("Plan: \(t.isEmpty ? plan.tipo.title : t)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -146,13 +160,18 @@ struct TrainingSessionLiveView: View {
     private func sessionRow(_ item: TrainingSessionItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(item.nombre)
+                // ✅ antes: item.nombre (no existe)
+                Text(item.nombreSnapshot)
                     .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
 
                 Spacer()
 
+                // 🔸 Por ahora borrado SOLO local (si quieres borrado en DB, añadimos endpoint en service)
                 Button(role: .destructive) {
-                    store.removeItem(item.id)
+                    withAnimation(.snappy(duration: 0.2)) {
+                        store.items.removeAll { $0.id == item.id }
+                    }
                 } label: {
                     Image(systemName: "trash")
                         .foregroundStyle(.secondary)
@@ -160,9 +179,9 @@ struct TrainingSessionLiveView: View {
                 .buttonStyle(.plain)
             }
 
-            // sets
+            // Sets
             VStack(spacing: 8) {
-                ForEach(Array(item.sets.enumerated()), id: \.offset) { idx, set in
+                ForEach(Array(item.sets.enumerated()), id: \.element.id) { idx, set in
                     HStack {
                         Text("Set \(idx + 1)")
                             .font(.caption.weight(.semibold))
@@ -171,7 +190,8 @@ struct TrainingSessionLiveView: View {
                         Spacer()
 
                         Button {
-                            store.toggleSetDone(itemId: item.id, setIndex: idx)
+                            // toggle local + sync a Supabase
+                            toggleSet(itemId: item.id, setId: set.id)
                         } label: {
                             Image(systemName: set.completado ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(set.completado ? accent : .secondary)
@@ -184,7 +204,7 @@ struct TrainingSessionLiveView: View {
                 }
 
                 Button {
-                    store.addSet(to: item.id)
+                    Task { await store.addSet(to: item.id) }
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -203,6 +223,29 @@ struct TrainingSessionLiveView: View {
         .padding(12)
         .background(Color.gray.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func toggleSet(itemId: UUID, setId: UUID) {
+        guard let itemIndex = store.items.firstIndex(where: { $0.id == itemId }) else { return }
+        guard let setIndex = store.items[itemIndex].sets.firstIndex(where: { $0.id == setId }) else { return }
+
+        let current = store.items[itemIndex].sets[setIndex]
+        let newDone = !current.completado
+
+        // ✅ UI inmediata
+        store.items[itemIndex].sets[setIndex].completado = newDone
+
+        // ✅ sync DB (sin rpe)
+        Task {
+            await store.updateSet(
+                setLocalId: setId,
+                reps: current.reps,
+                pesoKg: current.pesoKg,
+                tiempoSeg: current.tiempoSeg,
+                distanciaM: current.distanciaM,
+                completado: newDone
+            )
+        }
     }
 
     // MARK: - Helpers

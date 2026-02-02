@@ -63,15 +63,13 @@ struct IniciarEntrenamientoView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {
-                    selected.removeAll()
+                    withAnimation(.snappy(duration: 0.2)) { selected.removeAll() }
                 } label: {
                     Label("Limpiar selección", systemImage: "trash")
                 }
                 .disabled(selected.isEmpty)
 
-                Button {
-                    showPicker = true
-                } label: {
+                Button { showPicker = true } label: {
                     Label("Añadir ejercicios", systemImage: "plus")
                 }
             } label: {
@@ -90,9 +88,21 @@ struct IniciarEntrenamientoView: View {
             isEnabled: !selected.isEmpty,
             accent: accentForMode(mode)
         ) {
-            sessionStore.start(title: planTitleOrDefault)
-            selected.forEach { sessionStore.addExercise($0) }
-            goSession = true
+            guard !selected.isEmpty else { return }
+
+            Task {
+                await sessionStore.start(
+                    tipo: sessionTypeForModeOrPlan(),
+                    planSesionId: plan?.id,
+                    title: planTitleOrDefault
+                )
+
+                for ex in selected {
+                    await sessionStore.addExercise(ex)
+                }
+
+                goSession = true
+            }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
@@ -114,7 +124,7 @@ struct IniciarEntrenamientoView: View {
         .environmentObject(exerciseStore)
     }
 
-    // MARK: - Destination (IMPORTANT)
+    // MARK: - Destination
 
     private var sessionDestination: some View {
         TrainingSessionLiveView(
@@ -324,9 +334,7 @@ struct IniciarEntrenamientoView: View {
     // MARK: - Helpers
 
     private var subtitleForCTA: String {
-        if let p = plan {
-            return "\(selected.count) ejercicio(s) · \(subtitleForPlan(p))"
-        }
+        if let p = plan { return "\(selected.count) ejercicio(s) · \(subtitleForPlan(p))" }
         return "\(selected.count) ejercicio(s) · sesión rápida"
     }
 
@@ -362,6 +370,15 @@ struct IniciarEntrenamientoView: View {
     private func mapModeToExerciseType(_ m: Mode) -> ExerciseType {
         switch m {
         case .gimnasio: return .fuerza
+        case .cardio: return .cardio
+        case .movilidad: return .movilidad
+        }
+    }
+
+    private func sessionTypeForModeOrPlan() -> TrainingSessionType {
+        if let planTipo = plan?.tipo { return planTipo }
+        switch mode {
+        case .gimnasio: return .gimnasio
         case .cardio: return .cardio
         case .movilidad: return .movilidad
         }

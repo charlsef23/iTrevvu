@@ -19,13 +19,18 @@ struct ExerciseTypeView: View {
         let s = search.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return out }
 
-        let needle = s.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+        let needle = s
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .lowercased()
 
         return out.filter { ex in
-            let name = ex.nombre.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+            let name = ex.nombre
+                .folding(options: .diacriticInsensitive, locale: .current)
+                .lowercased()
             if name.contains(needle) { return true }
 
-            let aliases = (ex.aliases ?? []).map {
+            // ✅ aliases NO es opcional -> quitamos "?? []"
+            let aliases = ex.aliases.map {
                 $0.folding(options: .diacriticInsensitive, locale: .current).lowercased()
             }
             return aliases.contains(where: { $0.contains(needle) })
@@ -131,4 +136,3 @@ struct ExerciseTypeView: View {
         .padding(.top, 24)
     }
 }
-

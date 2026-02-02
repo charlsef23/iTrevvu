@@ -1,11 +1,13 @@
 import Foundation
 
+// MARK: - Rows (DB -> Swift)
+
 struct DBPlannedSession: Codable, Identifiable {
     let id: UUID
     let autor_id: UUID
 
     let fecha: String          // "YYYY-MM-DD"
-    let hora: String?          // "HH:mm:ss"
+    let hora: String?          // "HH:mm:ss" o "HH:mm:ss.SSSSSS" según Postgres
 
     let tipo: String
     let nombre: String
@@ -39,13 +41,17 @@ struct DBPlannedSessionExercise: Codable, Identifiable {
     let created_at: Date?
 }
 
+// MARK: - Mapping (DB -> Domain)
+
 extension DBPlannedSession {
+
     func toPlannedSession() -> PlannedSession {
-        let date = ISO8601DateFormatter().date(from: fecha + "T00:00:00Z") ?? Date()
+        // Convertimos "YYYY-MM-DD" a Date (medianoche UTC)
+        let iso = ISO8601DateFormatter()
+        let date = iso.date(from: "\(fecha)T00:00:00Z") ?? Date()
 
         return PlannedSession(
             id: id,
-            autorId: autor_id,
             date: date,
             hora: hora,
             tipo: TrainingSessionType(rawValue: tipo) ?? .gimnasio,
@@ -63,6 +69,7 @@ extension DBPlannedSession {
 }
 
 extension DBPlannedSessionExercise {
+
     func toPlannedSessionExercise() -> PlannedSessionExercise {
         PlannedSessionExercise(
             id: id,

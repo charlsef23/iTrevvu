@@ -8,7 +8,6 @@ struct PlanTrainingSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var planner: TrainingPlannerStore
 
-    // Tipo real del modelo
     @State private var kind: TrainingSessionType = .gimnasio
 
     // ✅ Nombre arriba
@@ -35,8 +34,14 @@ struct PlanTrainingSheet: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
 
-                    // ✅ Nombre arriba del todo + reutilizables
                     nameTopCard
+
+                    if showValidation {
+                        Text("Pon un nombre para la sesión.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
                     summaryCard
 
@@ -48,7 +53,6 @@ struct PlanTrainingSheet: View {
                         durationEditor
                     }
 
-                    // ✅ Repetir por días
                     sectionCard(title: "Repetir", icon: "arrow.triangle.2.circlepath", tint: TrainingBrand.stats) {
                         repeatEditor
                     }
@@ -107,9 +111,7 @@ struct PlanTrainingSheet: View {
 
                 Spacer()
 
-                Button {
-                    showNamePicker = true
-                } label: {
+                Button { showNamePicker = true } label: {
                     Label("Reutilizar", systemImage: "clock.arrow.circlepath")
                         .font(.subheadline.weight(.semibold))
                 }
@@ -118,6 +120,7 @@ struct PlanTrainingSheet: View {
             }
 
             TextField("Ej: Pierna · Hipertrofia", text: $title)
+                .textInputAutocapitalization(.sentences)
                 .padding(12)
                 .background(Color.gray.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -236,21 +239,12 @@ struct PlanTrainingSheet: View {
     private var kindGrid: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                KindTile("Gimnasio", "Fuerza", "dumbbell.fill", TrainingBrand.action, kind == .gimnasio) {
-                    kind = .gimnasio
-                }
-                KindTile("Cardio", "Tiempo", "figure.run", TrainingBrand.cardio, kind == .cardio) {
-                    kind = .cardio
-                }
+                KindTile("Gimnasio", "Fuerza", "dumbbell.fill", TrainingBrand.action, kind == .gimnasio) { kind = .gimnasio }
+                KindTile("Cardio", "Tiempo", "figure.run", TrainingBrand.cardio, kind == .cardio) { kind = .cardio }
             }
-
             HStack(spacing: 10) {
-                KindTile("Movilidad", "Recuperación", "figure.cooldown", TrainingBrand.mobility, kind == .movilidad) {
-                    kind = .movilidad
-                }
-                KindTile("Rutina", "Plantilla", "list.bullet", TrainingBrand.custom, kind == .rutina) {
-                    kind = .rutina
-                }
+                KindTile("Movilidad", "Recuperación", "figure.cooldown", TrainingBrand.mobility, kind == .movilidad) { kind = .movilidad }
+                KindTile("Rutina", "Plantilla", "list.bullet", TrainingBrand.custom, kind == .rutina) { kind = .rutina }
             }
         }
     }
@@ -293,7 +287,7 @@ struct PlanTrainingSheet: View {
                         .datePickerStyle(.compact)
                 }
 
-                Text("Se guardará como repetición en el plan y se generará automáticamente.")
+                Text("Se guardará como repetición y se generará automáticamente.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -319,6 +313,8 @@ struct PlanTrainingSheet: View {
     }
 
     private func saveSession() async {
+        showValidation = false
+
         let name = titleTrimmed
         if name.isEmpty {
             showValidation = true
@@ -341,18 +337,21 @@ struct PlanTrainingSheet: View {
             icono: iconForKind(kind),
             color: colorTokenForKind(kind),
             duracionMinutos: duration,
-            objetivo: nil, // ✅ eliminado
+            objetivo: nil,
             notas: noteTrimmed.isEmpty ? nil : noteTrimmed,
             meta: existing?.meta
         )
 
+        // ✅ LLAMADA CORRECTA (sin autorId)
         await planner.upsertSession(session)
 
-        // 2) Si repetición activa, guardar regla (plan_repeticiones)
+        // 2) Repetición (sin autorId)
         if repeatEnabled {
             let hour = Calendar.current.component(.hour, from: repeatTime)
             let minute = Calendar.current.component(.minute, from: repeatTime)
-            let horaString = repeatTimeEnabled ? String(format: "%02d:%02d:00", hour, minute) : nil
+            let horaString = repeatTimeEnabled
+                ? String(format: "%02d:%02d:00", hour, minute)
+                : nil
 
             let end = repeatEndEnabled ? repeatEndDate : nil
 
@@ -393,21 +392,7 @@ struct PlanTrainingSheet: View {
         return f.string(from: d).capitalized
     }
 
-    // MARK: - Switches
-
-    private func titleForKind(_ k: TrainingSessionType) -> String {
-        switch k {
-        case .gimnasio: return "Gimnasio"
-        case .cardio: return "Cardio"
-        case .movilidad: return "Movilidad"
-        case .rutina: return "Rutina"
-        case .hiit: return "HIIT"
-        case .calistenia: return "Calistenia"
-        case .deporte: return "Deporte"
-        case .rehab: return "Rehab"
-        case .descanso: return "Descanso"
-        }
-    }
+    private func titleForKind(_ k: TrainingSessionType) -> String { k.title }
 
     private func iconForKind(_ k: TrainingSessionType) -> String {
         switch k {
@@ -475,7 +460,9 @@ private struct WeekdayPicker: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(selected.contains(day) ? .white : .primary)
                         .frame(width: 34, height: 34)
-                        .background(Circle().fill(selected.contains(day) ? TrainingBrand.stats : Color.gray.opacity(0.10)))
+                        .background(
+                            Circle().fill(selected.contains(day) ? TrainingBrand.stats : Color.gray.opacity(0.10))
+                        )
                 }
                 .buttonStyle(.plain)
             }
@@ -498,15 +485,9 @@ private struct RecentNamesSheet: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(names, id: \.self) { n in
-                        Button { onPick(n) } label: {
-                            Text(n)
-                        }
+                        Button { onPick(n) } label: { Text(n) }
                     }
-                    Button(role: .destructive) {
-                        onClearAll()
-                    } label: {
-                        Text("Borrar historial")
-                    }
+                    Button(role: .destructive) { onClearAll() } label: { Text("Borrar historial") }
                 }
             }
             .navigationTitle("Reutilizar nombre")
