@@ -345,7 +345,7 @@ struct PlanTrainingSheet: View {
         // ✅ LLAMADA CORRECTA (sin autorId)
         await planner.upsertSession(session)
 
-        // 2) Repetición (sin autorId)
+        // 2) Repetición
         if repeatEnabled {
             let hour = Calendar.current.component(.hour, from: repeatTime)
             let minute = Calendar.current.component(.minute, from: repeatTime)
@@ -355,15 +355,18 @@ struct PlanTrainingSheet: View {
 
             let end = repeatEndEnabled ? repeatEndDate : nil
 
+            // ✅ TIPO CORRECTO: TrainingRepeatTemplate (NO RepeatTemplate)
+            let template = TrainingRepeatTemplate(
+                tipo: kind.rawValue,
+                nombre: name,
+                icono: iconForKind(kind),
+                color: colorTokenForKind(kind),
+                duracion_minutos: duration,
+                notas: noteTrimmed.isEmpty ? nil : noteTrimmed
+            )
+
             await planner.upsertRepeatPlan(
-                template: .init(
-                    tipo: kind.rawValue,
-                    nombre: name,
-                    icono: iconForKind(kind),
-                    color: colorTokenForKind(kind),
-                    duracion_minutos: duration,
-                    notas: noteTrimmed.isEmpty ? nil : noteTrimmed
-                ),
+                template: template,
                 startDate: date,
                 endDate: end,
                 byweekday: Array(repeatWeekdays).sorted(),
@@ -424,19 +427,6 @@ struct PlanTrainingSheet: View {
         case .movilidad, .rehab, .descanso: return "mobility"
         case .rutina, .deporte: return "custom"
         }
-    }
-}
-
-// MARK: - Repeat template DTO
-
-extension PlanTrainingSheet {
-    struct RepeatTemplate: Codable {
-        let tipo: String
-        let nombre: String
-        let icono: String
-        let color: String
-        let duracion_minutos: Int
-        let notas: String?
     }
 }
 

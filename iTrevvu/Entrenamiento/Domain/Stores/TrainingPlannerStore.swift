@@ -5,39 +5,28 @@ import Supabase
 @MainActor
 final class TrainingPlannerStore: ObservableObject {
 
-    // MARK: - Published
-
     @Published private(set) var sessionsByDayKey: [String: [PlannedSession]] = [:]
     @Published private(set) var isLoading = false
-
-    // MARK: - Private
 
     private let service: TrainingPlannerSupabaseService
     private var autorId: UUID?
 
-    /// Útil si alguna pantalla lo necesita (solo lectura)
     var autorIdValue: UUID? { autorId }
 
     private let cal: Calendar = {
         var c = Calendar.current
-        c.firstWeekday = 2 // lunes
+        c.firstWeekday = 2
         return c
     }()
-
-    // MARK: - Init
 
     init(client: SupabaseClient) {
         self.service = TrainingPlannerSupabaseService(client: client)
     }
 
-    // MARK: - Bootstrap
-
     func bootstrap() async {
         _ = await ensureAutorId()
     }
 
-    /// Asegura autorId (por si se llama antes de bootstrap()).
-    /// OJO: `currentUserId()` en el service NO puede ser `private`.
     private func ensureAutorId() async -> UUID? {
         if let autorId { return autorId }
         do {
@@ -49,8 +38,6 @@ final class TrainingPlannerStore: ObservableObject {
             return nil
         }
     }
-
-    // MARK: - Helpers
 
     func dayKey(_ date: Date) -> String {
         let comps = cal.dateComponents([.year, .month, .day], from: date)
@@ -69,8 +56,6 @@ final class TrainingPlannerStore: ObservableObject {
         !(sessionsByDayKey[dayKey(date)] ?? []).isEmpty
     }
 
-    // MARK: - Range
-
     func loadRange(around date: Date) async {
         guard let autorId = await ensureAutorId() else { return }
 
@@ -85,27 +70,22 @@ final class TrainingPlannerStore: ObservableObject {
 
             var dict: [String: [PlannedSession]] = [:]
             for r in rows {
-                let mapped = r.toPlannedSession()
-                dict[r.fechaKey, default: []].append(mapped)
+                dict[r.fechaKey, default: []].append(r.toPlannedSession())
             }
-
             for (k, list) in dict {
                 dict[k] = list.sorted(by: { $0.sortKey < $1.sortKey })
             }
-
             sessionsByDayKey = dict
         } catch {
-            // opcional: print(error)
+            // opcional
         }
     }
-
-    // MARK: - Upsert / Delete
 
     func upsertSession(_ session: PlannedSession) async {
         guard let autorId = await ensureAutorId() else { return }
 
         let dto = TrainingPlannerSupabaseService.UpsertPlannedSessionDTO(
-            id: session.id.uuidString,
+            id: session.id.uuidString, // si quieres "nil para insertar", dímelo y lo ajusto
             autor_id: autorId.uuidString,
             fecha: session.fechaKey,
             hora: session.hora,
@@ -130,11 +110,10 @@ final class TrainingPlannerStore: ObservableObject {
             } else {
                 list.append(mapped)
             }
-
             list.sort(by: { $0.sortKey < $1.sortKey })
             sessionsByDayKey[key] = list
         } catch {
-            // opcional: print(error)
+            // opcional
         }
     }
 
@@ -147,11 +126,9 @@ final class TrainingPlannerStore: ObservableObject {
             }
             sessionsByDayKey = sessionsByDayKey.filter { !$0.value.isEmpty }
         } catch {
-            // opcional: print(error)
+            // opcional
         }
     }
-
-    // MARK: - Exercises per session
 
     func loadSessionExercises(sessionId: UUID) async -> [PlannedSessionExercise] {
         do {
@@ -163,7 +140,8 @@ final class TrainingPlannerStore: ObservableObject {
     }
 
     func replaceSessionExercises(sessionId: UUID, items: [PlannedSessionExercise]) async -> Bool {
-        let dtos: [TrainingPlannerSupabaseService.CreatePlannedSessionExerciseDTO] = items.enumerated().map { idx, it in
+        let dtos: [TrainingPlannerSupabaseService.CreatePlannedSessionExerciseDTO] =
+        items.enumerated().map { idx, it in
             .init(
                 sesion_id: sessionId.uuidString,
                 orden: idx,
@@ -182,19 +160,14 @@ final class TrainingPlannerStore: ObservableObject {
         }
     }
 
-    // MARK: - Repeticiones (plan_repeticiones)
-
-    /// Importante: aquí NO se pasa autorId. Lo resuelve internamente (ensureAutorId + service).
     func upsertRepeatPlan(
-        template: PlanTrainingSheet.RepeatTemplate,
+        template: TrainingRepeatTemplate,
         startDate: Date,
         endDate: Date?,
         byweekday: [Int],
         hora: String?
     ) async {
         guard (await ensureAutorId()) != nil else { return }
-
-        // ✅ Si tu `service.upsertRepeatPlan` NO es throwing, NO uses `try`.
         await service.upsertRepeatPlan(
             template: template,
             startDate: startDate,

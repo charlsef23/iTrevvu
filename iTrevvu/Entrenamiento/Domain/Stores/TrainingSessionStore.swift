@@ -132,16 +132,18 @@ final class TrainingSessionStore: ObservableObject {
 
         do {
             guard let itemDbId = itemDbIdByLocal[itemLocalId] else { return }
+
+            // ✅ SIN rpe
             let setDto = TrainingSessionSupabaseService.CreateSetDTO(
                 sesion_item_id: itemDbId.uuidString,
                 orden: setOrden,
                 reps: nil,
                 peso_kg: nil,
-                rpe: nil,
                 tiempo_seg: nil,
                 distancia_m: nil,
                 completado: false
             )
+
             let setDbId = try await service.createSet(dto: setDto)
             setDbIdByLocal[setLocalId] = setDbId
         } catch {
@@ -172,16 +174,17 @@ final class TrainingSessionStore: ObservableObject {
         items[itemIdx].sets.append(newSet)
 
         do {
+            // ✅ SIN rpe
             let dto = TrainingSessionSupabaseService.CreateSetDTO(
                 sesion_item_id: itemDbId.uuidString,
                 orden: setOrden,
                 reps: nil,
                 peso_kg: nil,
-                rpe: nil,
                 tiempo_seg: nil,
                 distancia_m: nil,
                 completado: false
             )
+
             let setDbId = try await service.createSet(dto: dto)
             setDbIdByLocal[setLocalId] = setDbId
         } catch {
@@ -199,14 +202,15 @@ final class TrainingSessionStore: ObservableObject {
     ) async {
         guard let setDbId = setDbIdByLocal[setLocalId] else { return }
 
+        // ✅ SIN rpe
         let dto = TrainingSessionSupabaseService.UpdateSetDTO(
             reps: reps,
             peso_kg: pesoKg,
-            rpe: nil, // (si lo quitas en UI, mantenlo nil)
             tiempo_seg: tiempoSeg,
             distancia_m: distanciaM,
             completado: completado
         )
+
         try? await service.updateSet(setId: setDbId, dto: dto)
     }
 
@@ -214,7 +218,7 @@ final class TrainingSessionStore: ObservableObject {
 
     private static func dateKey(_ date: Date) -> String {
         let cal = Calendar.current
-        let c = cal.dateComponents([.year,.month,.day], from: date)
+        let c = cal.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 }
