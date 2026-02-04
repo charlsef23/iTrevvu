@@ -19,4 +19,8 @@ final class SupabaseManager {
             supabaseKey: anonKey
         )
     }
+    
+    var currentUserId: UUID? {
+           client.auth.currentSession?.user.id
+       }
 }

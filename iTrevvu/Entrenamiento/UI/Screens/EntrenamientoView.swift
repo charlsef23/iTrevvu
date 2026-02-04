@@ -63,7 +63,7 @@ struct EntrenamientoView: View {
 
             // ✅ navegación moderna (sin deprecated)
             .navigationDestination(isPresented: $presentTrain) {
-                IniciarEntrenamientoView(plan: planToTrain)
+                EntrenamientoRapidoView()
             }
 
             // ✅ carga

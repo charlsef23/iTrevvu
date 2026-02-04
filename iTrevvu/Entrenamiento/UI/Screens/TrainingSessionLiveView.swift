@@ -4,7 +4,7 @@ struct TrainingSessionLiveView: View {
 
     @ObservedObject var store: TrainingSessionStore
 
-    let mode: IniciarEntrenamientoView.Mode
+    let mode: TrainingMode
     let plan: PlannedSession?
     let exercises: [Exercise]
     let accent: Color
@@ -40,8 +40,6 @@ struct TrainingSessionLiveView: View {
             }
         }
         .task {
-            // Si vienes desde “Entrenar ahora”, normalmente ya cargaste ejercicios en el store.
-            // Pero si no hay items, arrancamos + sembramos una vez.
             if store.items.isEmpty && !exercises.isEmpty {
                 await startAndSeedIfNeeded()
             }
@@ -51,14 +49,12 @@ struct TrainingSessionLiveView: View {
     // MARK: - Arranque + seed
 
     private func startAndSeedIfNeeded() async {
-        // 1) start sesión en DB + store
         await store.start(
             tipo: sessionTypeForModeOrPlan(),
             planSesionId: plan?.id,
             title: planTitleOrDefault
         )
 
-        // 2) si después de arrancar sigue vacío, sembramos ejercicios
         guard store.items.isEmpty else { return }
 
         for ex in exercises {
@@ -160,14 +156,12 @@ struct TrainingSessionLiveView: View {
     private func sessionRow(_ item: TrainingSessionItem) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                // ✅ antes: item.nombre (no existe)
                 Text(item.nombreSnapshot)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
 
                 Spacer()
 
-                // 🔸 Por ahora borrado SOLO local (si quieres borrado en DB, añadimos endpoint en service)
                 Button(role: .destructive) {
                     withAnimation(.snappy(duration: 0.2)) {
                         store.items.removeAll { $0.id == item.id }
@@ -179,7 +173,6 @@ struct TrainingSessionLiveView: View {
                 .buttonStyle(.plain)
             }
 
-            // Sets
             VStack(spacing: 8) {
                 ForEach(Array(item.sets.enumerated()), id: \.element.id) { idx, set in
                     HStack {
@@ -190,7 +183,6 @@ struct TrainingSessionLiveView: View {
                         Spacer()
 
                         Button {
-                            // toggle local + sync a Supabase
                             toggleSet(itemId: item.id, setId: set.id)
                         } label: {
                             Image(systemName: set.completado ? "checkmark.circle.fill" : "circle")
@@ -232,10 +224,8 @@ struct TrainingSessionLiveView: View {
         let current = store.items[itemIndex].sets[setIndex]
         let newDone = !current.completado
 
-        // ✅ UI inmediata
         store.items[itemIndex].sets[setIndex].completado = newDone
 
-        // ✅ sync DB (sin rpe)
         Task {
             await store.updateSet(
                 setLocalId: setId,
@@ -247,8 +237,6 @@ struct TrainingSessionLiveView: View {
             )
         }
     }
-
-    // MARK: - Helpers
 
     private var planTitleOrDefault: String {
         if let plan {
