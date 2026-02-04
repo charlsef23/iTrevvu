@@ -15,6 +15,8 @@ final class QuickWorkoutStore: ObservableObject {
         self.client = client
     }
 
+    // MARK: - Catálogo entrenos rápidos
+
     func loadTypes() async {
         isLoading = true
         errorMessage = nil
@@ -33,6 +35,8 @@ final class QuickWorkoutStore: ObservableObject {
             self.errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Sesión rápida
 
     func startSession(type: QuickWorkoutType, autorId: UUID) async -> QuickWorkoutSession? {
         do {
@@ -73,6 +77,24 @@ final class QuickWorkoutStore: ObservableObject {
             self.errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Historial
+
+    func loadSessions(autorId: UUID) async -> [QuickWorkoutSession] {
+        do {
+            let res = try await client
+                .from("sesiones_entrenamiento_rapido")
+                .select()
+                .eq("autor_id", value: autorId.uuidString)
+                .order("created_at", ascending: false)
+                .execute()
+
+            return try JSONDecoder.supabase.decode([QuickWorkoutSession].self, from: res.data)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return []
+        }
+    }
 }
 
 // MARK: - JSON helpers
@@ -85,7 +107,7 @@ extension JSONDecoder {
     }
 }
 
-// MARK: - AnyEncodable helper (para payloads)
+// MARK: - AnyEncodable helper
 
 struct AnyEncodable: Encodable {
     private let _encode: (Encoder) throws -> Void
